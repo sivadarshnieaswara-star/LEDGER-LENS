@@ -1649,9 +1649,8 @@ async function drawCard(f, i, n) {
   }
   x.fillStyle = "rgba(0,0,0,.22)"; x.beginPath(); x.roundRect(L - 16, H - 104, W - 2 * L + 32, 66, 16); x.fill();
   x.fillStyle = "#fff"; x.font = font(600, 24);
-  const demo = wrapText(x, f.demo[0], W - 2 * L - 260)[0];
+  const demo = wrapText(x, f.demo[0], W - 2 * L - 24)[0];
   x.fillText(demo, L + 12, H - 62);
-  x.textAlign = "right"; x.fillText("Click to explore  →", W - L - 4, H - 62); x.textAlign = "left";
   return c;
 }
 
@@ -1951,14 +1950,14 @@ function pageLanding() {
   <section class="l-sec" id="l-features" style="padding-top:20px"><div class="l-wrap">
     <span class="eyebrow">Features</span>
     <h2>Ten capabilities, one engine.</h2>
-    <p class="sub">A 3D ring of features. Drag and throw it, or use the arrow keys. Hovering slows it to a stop. Click a card to turn it to the front, then click again to open it.</p>
+    <p class="sub">Everything LedgerLens does, from matching to audit, with a real example from the demo data for each.</p>
     <div id="flexc"></div>
   </div></section>
 
   <section class="l-sec" id="l-how"><div class="l-wrap">
     <span class="eyebrow">How it works</span>
     <h2>From three files to one explained answer.</h2>
-    <p class="sub">Each stage narrows what's left for the next, and everything ends up in an audit trail. Every card shows real numbers from the latest run. Hover around, then click a card to jump in.</p>
+    <p class="sub">Each stage narrows what's left for the next, and everything ends up in an audit trail. Every card shows real numbers from the latest run.</p>
     ${bentoHTML(run, st, ing)}
     <div style="margin-top:16px"><a class="btn" href="#/pipeline">See the live pipeline diagram →</a></div>
   </div></section>
@@ -1970,7 +1969,6 @@ function pageLanding() {
         <h2>${run ? `Run #${run.id} · as of ${dayFmt(run.as_of)}` : "No runs yet"}</h2>
         <p class="sub">${(ing.gateways || []).join(" + ") || "Gateways"} into ${(ing.bank_accounts || []).join(" + ") || "bank accounts"}. These panels are read straight from the run, not mocked.</p>
         <div class="live2-list" id="cw-list">${liveCards(run, st, active).map((c, i) => `<button data-i="${i}"><span class="ico ${c.ico}">${c.glyph}</span>${esc(c.title)}<b>${c.big}</b></button>`).join("")}</div>
-        <p class="muted" style="font-size:13px;margin-top:14px">The front card drops to the back every 4 seconds. Hover to pause, fling it away, or pick one from the list.</p>
       </div>
       <div class="cw" id="cw" tabindex="0" role="region" aria-roledescription="card stack" aria-label="Live run panels">
         ${liveCards(run, st, active).map((c, i) => `<div class="cw-card" data-i="${i}" role="group" aria-label="${esc(c.title)}">
@@ -1982,8 +1980,8 @@ function pageLanding() {
 
   <section class="l-sec" id="l-try" style="padding-top:20px"><div class="l-wrap">
     <span class="eyebrow">Try it</span>
-    <h2>Six cases worth clicking.</h2>
-    <p class="sub">Each one is planted in the demo data to show a different part of the engine. Drag or swipe through them, use the arrow keys, or jump with the numbers.</p>
+    <h2>Six cases from the demo data.</h2>
+    <p class="sub">Each one is planted in the demo data to show a different part of the engine.</p>
   </div>
   <div class="oc" id="oc" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Demo cases">
     <div class="oc-track">
@@ -2012,7 +2010,7 @@ function pageLanding() {
         <div class="cta" style="margin-top:18px"><a class="btn primary" href="#/reports">Open dashboard</a><a class="btn" href="#/sources">Upload your data</a></div></div>
     </div>
   </div></section>
-  <footer class="l-foot"><div class="l-wrap" style="display:flex;gap:16px;flex-wrap:wrap"><span>LedgerLens: intelligent payment reconciliation</span><span style="flex:1"></span><span>Keyboard: <kbd>r</kbd> reports · <kbd>q</kbd> queue · <kbd>/</kbd> search</span></div></footer>`;
+  <footer class="l-foot"><div class="l-wrap" style="display:flex;gap:16px;flex-wrap:wrap"><span>LedgerLens: intelligent payment reconciliation</span></div></footer>`;
 
   // ---- flex carousel
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
