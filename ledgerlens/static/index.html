@@ -374,6 +374,8 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 @media (max-width: 560px) { .cw { height: 330px; --s: .55; } .cw-card { left: 0; transform-origin: 0 100%; } .live2-list { max-width: none; } }
 
 /* ================= Intro → dashboard: circuit-board transition ================= */
+.ro-bar { margin: 0 14px 18px; padding: 10px 14px; border-radius: 10px; background: var(--med-soft); color: var(--ink); font-size: 13px; }
+.ro-bar code { font-family: var(--mono); font-size: 12px; }
 .cb { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: var(--canvas); color: var(--ink);
   background-image: radial-gradient(color-mix(in srgb, var(--ink) 16%, transparent) 1px, transparent 1.2px); background-size: 22px 22px;
   animation: cbIn .25s ease both; }
@@ -607,7 +609,7 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
     <nav class="nav" id="nav"></nav>
     <div class="foot" style="justify-content:space-between"><button class="collapse" id="theme" title="Toggle dark mode" aria-label="Toggle dark mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button><button class="collapse" id="collapse" title="Collapse sidebar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button></div>
   </aside>
-  <main class="main" id="page"></main>
+  <main class="main"><div class="ro-bar" id="ro-bar" hidden>Read-only demo: browsing works everywhere. Reviews, approvals, uploads and new runs need the full app (<code>python3 -m ledgerlens up</code> or the Render deploy).</div><div id="page"></div></main>
 </div>
 <div id="overlay"></div>
 <script>
@@ -618,7 +620,21 @@ const amt = (c, ccy = "USD") => (c < 0 ? "−" : "") + (Math.abs(c) / 100).toLoc
 const pct = x => (x * 100).toFixed(1) + "%";
 const dayFmt = d => d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"}) : "";
 const when = iso => iso ? new Date(iso).toLocaleString("en-GB", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : "";
-const api = async (p, opt) => { const r = await fetch(p, opt); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j; };
+// Static hosting (e.g. Netlify): every GET was pre-rendered to data/*.json at build time; writes are disabled.
+const STATIC = !!window.LEDGERLENS_STATIC;
+const READONLY = "This is a read-only demo on static hosting. Run LedgerLens locally or on Render to review, approve, upload or run reconciliations.";
+const staticPath = p => { const path = decodeURIComponent(p.split("?")[0]).replace(/^\//, ""); return "data/" + path.replace(/[^A-Za-z0-9._-]/g, "_") + (path.endsWith(".csv") ? "" : ".json"); };
+const dl = p => STATIC ? staticPath(p) : p;
+const api = async (p, opt) => {
+  if (STATIC) {
+    if (opt?.method && opt.method !== "GET") throw new Error(READONLY);
+    const r = await fetch(staticPath(p)); if (!r.ok) throw new Error(r.status === 404 ? "Not available in the static demo" : r.statusText);
+    const j = await r.json(), lim = +new URLSearchParams(p.split("?")[1] || "").get("limit");
+    if (lim && Array.isArray(j.log)) j.log = j.log.slice(0, lim);
+    return j;
+  }
+  const r = await fetch(p, opt); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j;
+};
 const post = (p, body) => api(p, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
 const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
@@ -772,7 +788,7 @@ async function pageReport(runId, pair) {
   $("#page").innerHTML = `<div class="head"><div><a class="crumb" href="#/reports">‹ Reconciliation reports</a>
       <h1 style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${src(r.source_a)} <span class="muted">↔</span> ${src(r.source_b)}</h1>
       <p>Run #${r.run.id}${r.run.label ? " · " + esc(r.run.label) : ""} · as of ${dayFmt(r.run.as_of)}</p></div>
-      <div class="grow"></div><a class="btn" href="/api/export/report/${r.run.id}/${pair}.csv" download>⤓ Export CSV</a></div>`
+      <div class="grow"></div><a class="btn" href="${dl(`/api/export/report/${r.run.id}/${pair}.csv`)}" download>⤓ Export CSV</a></div>`
     + kpis([["Reconciled amount", amt(r.reconciled_amount, r.currency)], ["Matched percentage", pct(r.matched_pct), `${r.clean} of ${r.records} records clean`],
             ["Amount difference", amt(r.mismatched_amount, r.currency), `${r.discrepancies.length} discrepancies`]])
     + (r.breakdown?.length ? `<div class="card"><h2>By source <span class="sub">every gateway and bank account in this run</span></h2><div class="tbox"><table><thead><tr><th>Source</th><th>Type</th><th>Records</th><th>Matched</th><th class="r">Mismatched</th></tr></thead><tbody>
@@ -845,7 +861,7 @@ function pageQueue() {
         <span style="width:8px"></span>
         ${["high", "medium", "low"].map(s => `<button class="chip ${S.qSev === s ? "on" : ""}" data-sv="${s}">${s}</button>`).join("")}
         <span style="flex:1"></span><input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S.q)}">
-        <a class="btn" href="/api/export/exceptions.csv${S.qStatus ? "?status=" + S.qStatus : ""}" download>⤓ Export CSV</a></div>
+        <a class="btn" href="${STATIC ? dl("/api/export/exceptions.csv") : "/api/export/exceptions.csv" + (S.qStatus ? "?status=" + S.qStatus : "")}" download>⤓ Export CSV</a></div>
       ${S.sel.size ? `<div class="bulkbar"><b>${S.sel.size} selected</b><span style="flex:1"></span>
         <input type="text" id="bactor" placeholder="Your name" value="${esc(lsGet("ll_actor") || "")}" style="width:130px">
         <input type="text" id="bnote" placeholder="Note for the audit trail" style="min-width:220px">
@@ -1092,7 +1108,7 @@ function pageSources() {
       <div class="srccard"><h3>${SRC_ICON["Internal ledger"]} Internal payment ledger</h3><div class="muted">CSV export · ${ing.ledger ?? "–"} entries in the last run</div><div class="path">${esc(s.sources.ledger)}</div></div>
       <div class="srccard"><h3>${SRC_ICON["Gateway settlement feed"]} Gateways · ${(ing.gateways || []).length}</h3><div class="muted">${(ing.gateways || []).map(esc).join(", ") || "–"} · ${ing.gateway ?? "–"} events</div>${[].concat(s.sources.gateway).map(x => `<div class="path">${esc(x)}</div>`).join("")}</div>
       <div class="srccard"><h3>${SRC_ICON["Bank settlement"]} Bank accounts · ${(ing.bank_accounts || []).length}</h3><div class="muted">${(ing.bank_accounts || []).map(esc).join(", ") || "–"} · ${ing.bank ?? "–"} lines · CSV or API simulator</div>
-        ${[].concat(s.sources.bank).map(x => `<div class="path">${esc(x)}</div>`).join("")}<div class="path" style="margin-top:4px">GET <a href="/sim/bank/v1/transactions?limit=5" target="_blank">${esc(s.sources.bank_api)}/transactions</a></div></div>
+        ${[].concat(s.sources.bank).map(x => `<div class="path">${esc(x)}</div>`).join("")}<div class="path" style="margin-top:4px">GET <a href="${dl("/sim/bank/v1/transactions?limit=5")}" target="_blank">${esc(s.sources.bank_api)}/transactions</a></div></div>
     </div>
     <div class="card"><h2>Run reconciliation <span class="sub">Uses records dated before the as-of date, like a daily close</span></h2>
       <div class="runform">
@@ -1105,7 +1121,7 @@ function pageSources() {
       <div class="srcgrid" style="padding:0 8px;margin-bottom:12px">
         ${[["ledger", "Internal ledger", "entry_id, order_ref, posted_at, type, amount, currency"], ["gateway", "Gateway feeds (one file per gateway)", "txn_id, merchant_ref, created, type, gross, fee, net, payout_id, gateway, customer"], ["bank", "Bank statements (one per account)", "bank_ref, value_date, description, amount, currency, account"]]
           .map(([k, l, cols]) => `<label class="drop" id="drop-${k}"><b>${l}</b><span class="muted" style="font-size:12px">${cols}</span>
-            <input type="file" accept=".csv,text/csv" data-up="${k}" ${k === "ledger" ? "" : "multiple"} style="font-size:12px"><a href="/templates/${k}.csv" download style="font-size:12px;color:var(--accent)">Download template</a></label>`).join("")}
+            <input type="file" accept=".csv,text/csv" data-up="${k}" ${k === "ledger" ? "" : "multiple"} style="font-size:12px"><a href="${dl(`/templates/${k}.csv`)}" download style="font-size:12px;color:var(--accent)">Download template</a></label>`).join("")}
       </div>
       <div class="runform"><label>As of<input type="date" id="upasof" value="${new Date().toISOString().slice(0, 10)}"></label>
         <button class="btn primary" id="upbtn" disabled>Reconcile uploaded files</button><span class="muted" id="upmsg">Choose all three files</span></div></div>
@@ -2142,6 +2158,7 @@ document.addEventListener("keydown", e => {
   const go = { r: "#/reports", q: "#/queue", t: "#/trace", p: "#/pipeline", a: "#/audit", d: "#/sources" }[e.key];
   if (go && !e.metaKey && !e.ctrlKey) location.hash = go;
 });
+if (STATIC) $("#ro-bar").hidden = false;
 refresh().then(route).catch(e => { $("#page").innerHTML = `<div class="empty">Could not reach the server: ${esc(e.message)}</div>`; });
 </script>
 </body>

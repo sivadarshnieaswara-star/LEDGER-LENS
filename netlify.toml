@@ -1,0 +1,8 @@
+# Netlify can't run the Python server, so the build pre-renders a read-only demo.
+# For the full interactive app use Render (render.yaml) or run it locally.
+[build]
+  command = "python3 -m ledgerlens export-static --out site"
+  publish = "site"
+
+[build.environment]
+  PYTHON_VERSION = "3.12"

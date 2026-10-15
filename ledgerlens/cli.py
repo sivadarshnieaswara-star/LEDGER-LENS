@@ -190,5 +190,9 @@ def main(argv=None) -> int:
     u.add_argument("--no-browser", action="store_true")
     u.set_defaults(fn=cmd_up)
 
+    ex = sub.add_parser("export-static", help="pre-render a read-only demo for static hosting (Netlify etc.)")
+    ex.add_argument("--out", default="site")
+    ex.set_defaults(fn=lambda a: __import__("ledgerlens.static_export", fromlist=["export"]).export(a.out))
+
     a = p.parse_args(argv)
     return a.fn(a)

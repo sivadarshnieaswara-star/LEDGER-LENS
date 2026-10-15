@@ -21,6 +21,10 @@ It needs Python 3.10+ and nothing else: no `pip install`, no database server.
 - **Render (free):** click the button above, or in the Render dashboard choose *New → Blueprint* and pick
   this repository. `render.yaml` sets everything up: there is no build step, and the start command is
   `python -m ledgerlens up --no-browser`.
+- **Netlify (read-only demo):** Netlify only serves static files and can't run the Python server, so
+  `netlify.toml` builds a pre-rendered demo instead (`python3 -m ledgerlens export-static --out site`). The
+  intro page and every dashboard page work, but reviews, approvals, uploads and new runs are disabled and
+  show a notice. Use Render for the full app.
 - **Railway / Heroku-style hosts:** the `Procfile` runs the same command.
 - **Fly.io, Cloud Run, a VPS:** use the `Dockerfile` (`docker build -t ledgerlens . && docker run -p 8765:8765 ledgerlens`).
 
