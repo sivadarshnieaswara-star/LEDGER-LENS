@@ -134,6 +134,106 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 .badge2.expired { background: var(--high-soft); color: var(--high); }
 .st.pending_approval { color: var(--accent); } .st.partially_settled { color: var(--med); }
 .pill.partially_settled { background: var(--med-soft); color: var(--med); }
+
+/* ================= landing ================= */
+#landing { min-height: 100vh; background: var(--canvas); color: var(--ink); }
+#landing[hidden], .app[hidden] { display: none !important; }
+.l-wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.l-nav { position: sticky; top: 0; z-index: 30; backdrop-filter: blur(12px); background: color-mix(in srgb, var(--canvas) 82%, transparent); border-bottom: 1px solid var(--line); }
+.l-nav .l-wrap { display: flex; align-items: center; gap: 22px; height: 64px; }
+.l-nav a.lk { color: var(--ink-2); text-decoration: none; font-weight: 500; font-size: 14px; }
+.l-nav a.lk:hover { color: var(--accent); }
+.l-hero { padding: 72px 0 44px; display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center; }
+.eyebrow { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 5px 12px; border-radius: 999px; }
+.l-hero h1 { font-size: clamp(36px, 5.2vw, 60px); line-height: 1.04; letter-spacing: -.035em; margin: 18px 0 18px; font-weight: 700; }
+.l-hero h1 em { font-style: normal; color: var(--accent); }
+.l-hero p.lead { font-size: 18px; line-height: 1.55; color: var(--ink-2); margin: 0 0 28px; max-width: 560px; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn.lg { padding: 13px 22px; font-size: 15px; border-radius: 10px; font-weight: 600; }
+.l-proof { display: flex; gap: 26px; margin-top: 32px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+.l-proof b { display: block; color: var(--ink); font-size: 22px; font-variant-numeric: tabular-nums; }
+.hero-card { background: var(--panel); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; position: relative; overflow: hidden; }
+.hero-card .src3 { display: grid; gap: 10px; }
+.hc-row { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 11px 12px; border-radius: 10px; background: var(--row); font-size: 13px; animation: slidein .6s both; }
+.hc-row:nth-child(2) { animation-delay: .15s } .hc-row:nth-child(3) { animation-delay: .3s }
+.hc-merge { text-align: center; color: var(--muted); font-size: 12px; margin: 10px 0; letter-spacing: .1em; }
+.hc-result { border: 1.5px solid var(--accent); border-radius: 12px; padding: 14px; animation: slidein .6s .5s both; }
+.hc-result .t { font-weight: 600; margin-bottom: 4px; }
+@keyframes slidein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.l-sec { padding: 64px 0; }
+.l-sec h2 { font-size: clamp(26px, 3.4vw, 38px); letter-spacing: -.025em; margin: 10px 0 12px; }
+.l-sec p.sub { color: var(--ink-2); font-size: 16px; max-width: 680px; margin: 0 0 30px; line-height: 1.55; }
+.problem { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.pcard { background: var(--panel); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); }
+.pcard .n { font-size: 30px; font-weight: 700; color: var(--accent); }
+.pcard h3 { margin: 6px 0; font-size: 16px; }
+.pcard p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+/* flex carousel */
+.fc { display: flex; gap: 12px; height: 440px; }
+.fc-panel { position: relative; flex: 1; min-width: 0; border-radius: 18px; overflow: hidden; cursor: pointer; color: #fff;
+  transition: flex .6s cubic-bezier(.2,.8,.2,1), filter .3s; background: var(--g); outline: none; }
+.fc-panel.on { flex: 8.5; cursor: default; }
+.fc-panel:not(.on):hover { filter: brightness(1.12); }
+.fc-panel:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+.fc-panel .num { position: absolute; top: 18px; left: 18px; font-weight: 700; font-size: 13px; opacity: .8; }
+.fc-panel .vt { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%) rotate(180deg); writing-mode: vertical-rl;
+  font-weight: 600; font-size: 15px; white-space: nowrap; transition: opacity .3s; }
+.fc-panel.on .vt { opacity: 0; }
+.fc-body { position: absolute; inset: 0; padding: 30px 32px; display: grid; grid-template-rows: auto 1fr auto; gap: 16px;
+  opacity: 0; transform: translateY(14px); transition: opacity .35s, transform .45s; pointer-events: none; min-width: 440px; }
+.fc-panel.on .fc-body { opacity: 1; transform: none; transition-delay: .25s; pointer-events: auto; }
+.fc-body .ic { width: 46px; height: 46px; border-radius: 12px; background: rgba(255,255,255,.18); display: grid; place-items: center; }
+.fc-body .ic svg { width: 24px; height: 24px; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.fc-body h3 { font-size: 26px; margin: 14px 0 8px; letter-spacing: -.02em; }
+.fc-body p { margin: 0; font-size: 15px; line-height: 1.55; opacity: .92; max-width: 520px; }
+.fc-body ul { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; font-size: 14px; }
+.fc-body li::before { content: "→ "; opacity: .7; }
+.fc-demo { background: rgba(0,0,0,.22); border-radius: 12px; padding: 12px 14px; font-size: 13px; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.fc-demo code { font-family: var(--mono); font-size: 12px; }
+.fc-demo a { color: #fff; font-weight: 600; white-space: nowrap; }
+.fc-ctrl { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+.fc-dots { display: flex; gap: 6px; flex: 1; }
+.fc-dots button { flex: 1; height: 4px; border: 0; border-radius: 2px; background: var(--line); cursor: pointer; padding: 0; position: relative; overflow: hidden; }
+.fc-dots button.on::after { content: ""; position: absolute; inset: 0; background: var(--accent); transform-origin: left; animation: fill var(--dur, 6s) linear forwards; }
+.fc.paused + .fc-ctrl .fc-dots button.on::after { animation-play-state: paused; }
+@keyframes fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.fc-arrow { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); cursor: pointer; font-size: 18px; }
+.fc-count { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; min-width: 52px; text-align: right; }
+
+.flow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; counter-reset: s; }
+.flow div { background: var(--panel); border-radius: 12px; padding: 16px 14px; box-shadow: var(--shadow); position: relative; font-size: 13px; color: var(--muted); }
+.flow div b { display: block; color: var(--ink); font-size: 14px; margin: 6px 0 4px; }
+.flow div::before { counter-increment: s; content: counter(s, decimal-leading-zero); font-weight: 700; color: var(--accent); font-size: 12px; }
+.live { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.live .kpi .v { font-size: 28px; }
+.scen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.scen a { display: block; background: var(--panel); border-radius: 12px; padding: 16px; text-decoration: none; color: var(--ink); box-shadow: var(--shadow); transition: transform .2s; }
+.scen a:hover { transform: translateY(-2px); }
+.scen .tag { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+.scen p { margin: 6px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.stack3 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.term { background: #121316; color: #d8dbe0; border-radius: 14px; padding: 20px 22px; font-family: var(--mono); font-size: 13px; line-height: 1.8; overflow-x: auto; }
+.term .c { color: #7b8190; } .term .p { color: #f0652f; }
+.l-foot { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--muted); font-size: 13px; }
+@media (max-width: 960px) {
+  .l-hero { grid-template-columns: 1fr; padding-top: 40px; }
+  .problem, .scen, .stack3 { grid-template-columns: 1fr; }
+  .flow { grid-template-columns: 1fr 1fr; }
+  .live { grid-template-columns: 1fr 1fr; }
+  .l-nav .lk.hide-sm { display: none; }
+  .fc { flex-direction: column; height: auto; }
+  .fc-panel { flex: none; height: 64px; transition: height .5s cubic-bezier(.2,.8,.2,1); }
+  .fc-panel.on { height: 640px; flex: none; }
+  .fc-body { padding-top: 46px !important; }
+  .fc-demo { flex-direction: column; align-items: flex-start; }
+  .l-nav .btn { white-space: nowrap; padding: 7px 12px; }
+  .l-nav .l-wrap { gap: 12px; }
+  .fc-panel .vt { writing-mode: horizontal-tb; transform: none; left: 56px; bottom: auto; top: 21px; }
+  .fc-body { min-width: 0; padding: 24px 20px; }
+  .fc-body h3 { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .fc-panel, .fc-body, .hc-row, .hc-result { transition: none; animation: none; } }
 @media (max-width: 900px) { .buckets { grid-template-columns: 1fr 1fr; } .frow { grid-template-columns: 110px 1fr 44px; } }
 @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } .kbar { grid-template-columns: 110px 1fr 28px; } }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -253,9 +353,10 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 </style>
 </head>
 <body>
-<div class="app" id="app">
+<div id="landing" hidden></div>
+<div class="app" id="app" hidden>
   <aside class="side">
-    <div class="logo">
+    <div class="logo" onclick="location.hash='#/home'" style="cursor:pointer" title="Back to intro">
       <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="13" cy="13" r="9.5" fill="none" stroke="var(--logo)" stroke-width="3.2"/><path d="M20 20l7 7" stroke="#d64511" stroke-width="3.6" stroke-linecap="round"/><path d="M9 9v8h7" fill="none" stroke="var(--logo)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>LedgerLens</span>
     </div>
@@ -305,7 +406,7 @@ async function refresh() {
 }
 
 function renderNav() {
-  const route = location.hash.slice(2).split("/")[0] || "reports";
+  const route = location.hash.slice(2).split("/")[0] || "home";
   const active = S.exceptions.filter(e => ["open", "investigating", "pending_approval"].includes(e.status)).length;
   const pending = S.exceptions.filter(e => e.status === "pending_approval").length;
   const openDisputes = (S.summary?.run?.disputes || []).filter(d => d.status !== "won").length;
@@ -809,9 +910,213 @@ async function pageAudit() {
   bindRows();
 }
 
+
+/* ================= Landing page ================= */
+const FEATURES = [
+  { t: "Advanced matching", g: "linear-gradient(150deg,#d64511,#8f2a06)", i: "trace",
+    d: "Five strategies run from strictest to loosest, so every pairing uses the strongest evidence available.",
+    b: ["Exact: normalised references, so 'ORD-01001' = 'ord_1001'", "Composite: customer + amount + currency + date", "Aggregate: records that sum to a counterpart", "Probabilistic: scored candidates, accepted automatically or sent to review"],
+    demo: ["ORD-3005 has a blank gateway reference but matches on customer cus_355", "#/reports/LAST/ledger_gateway"] },
+  { t: "One-to-many & many-to-one", g: "linear-gradient(150deg,#6a4cf5,#3a1fa8)", i: "pipeline",
+    d: "Real money rarely moves 1:1. LedgerLens finds the combination of records that adds up.",
+    b: ["Split capture: 2 charges → 1 order", "Consolidated checkout: 1 charge → 3 orders", "Split deposit: 2 bank lines → 1 payout", "Batched transfer: 1 bank line → 2 payouts"],
+    demo: ["CART-77 ($100) settles ORD-3002, ORD-3003 and ORD-3004", "#/reports/LAST/ledger_gateway"] },
+  { t: "Partial settlement & refunds", g: "linear-gradient(150deg,#0f8a6a,#065541)", i: "payouts",
+    d: "Partial money isn't wrong money. It's tracked until it is due, then escalated if the rest never arrives.",
+    b: ["Partially received payouts held until the due date", "Partial refunds tracked per order", "Over-refunds flagged when refunds + chargebacks exceed the capture"],
+    demo: ["Paystream PS-STL-04: 50% received so far", "#/aging"] },
+  { t: "Chargebacks & reversals", g: "linear-gradient(150deg,#c0261b,#7a120b)", i: "disputes",
+    d: "Every dispute is followed from chargeback to verdict, with the evidence deadline counting down.",
+    b: ["Open, won and expired disputes", "Days left before the evidence deadline", "Chargebacks or reversals missing from the ledger", "Win rate across gateways"],
+    demo: ["ORD-3007 was refunded and charged back: an over-refund", "#/disputes"] },
+  { t: "Exception classification", g: "linear-gradient(150deg,#a35f00,#5e3600)", i: "queue",
+    d: "21 discrepancy types, each with a severity, a plain-English cause, a suggested action and the exact records involved.",
+    b: ["Stable fingerprints carry history across runs", "Fixed issues auto-clear and relapses reopen", "Bulk triage, assignment, search, CSV export"],
+    demo: ["Customer double-charged on ORD-1005: two distinct transaction ids", "#/queue"] },
+  { t: "Explainable confidence", g: "linear-gradient(150deg,#2563c9,#123a7a)", i: "reports",
+    d: "No black box. Every match shows the weighted factors behind its score, and they add up exactly to the confidence.",
+    b: ["weight × score = contribution, for every factor", "Ties broken by margin over the runner-up", "Close calls go to human review, not auto-match"],
+    demo: ["ORD-1032: 73% candidate, $4.20 short, so it goes to human review", "#/queue"] },
+  { t: "Review & approval", g: "linear-gradient(150deg,#3c3f44,#17181a)", i: "approvals",
+    d: "Maker-checker built in. Closing anything high-severity or above $100 needs a second pair of eyes.",
+    b: ["Investigate, assign, comment, confirm candidate matches", "Approval requests with approve / reject", "You can't approve your own request"],
+    demo: ["Resolve a high-severity item, then approve it as someone else", "#/approvals"] },
+  { t: "Hash-verified audit trail", g: "linear-gradient(150deg,#23843f,#0f4d22)", i: "audit",
+    d: "Every detection and every human decision is append-only and SHA-256 chained to the one before it.",
+    b: ["Database triggers block edits and deletes", "Chain verified on every page load", "Tampering is pinpointed to the exact event"],
+    demo: ["Hash chain intact and verified on every load", "#/audit"] },
+  { t: "Settlement delay & aging", g: "linear-gradient(150deg,#b8860b,#6b4d04)", i: "aging",
+    d: "See how long problems stay open and how late money really arrives, per gateway and per account.",
+    b: ["Aging buckets by severity", "On-time rate, average and worst delay per gateway", "Per-payout delay timeline and outstanding amounts"],
+    demo: ["NovaPay po_7Hq2C arrived 4 days late", "#/aging"] },
+  { t: "Multi-gateway & multi-bank", g: "linear-gradient(150deg,#0e2747,#081629)", i: "sources",
+    d: "Any number of gateway feeds and bank accounts, by CSV upload or a paginated bank API, each with its own fee contract.",
+    b: ["NovaPay + Paystream → Northbank + Harbor Bank in the demo", "Per-gateway fee rate cards", "Reports broken down per gateway and per account"],
+    demo: ["Bank API simulator: GET /sim/bank/v1/transactions", "#/sources"] },
+];
+const LANDING_SCEN = [
+  ["ORD-1005", "Customer charged twice: two real transactions, not a webhook replay.", "#/trace"],
+  ["po_7Hq2D", "Bank short by exactly one transaction's net. LedgerLens names which one.", "#/payouts"],
+  ["ORD-1032", "73% candidate: confirm it, and the leftover $4.20 is flagged on the next run.", "#/queue"],
+  ["ORD-3002–4", "One $100 consolidated checkout pays three orders.", "#/trace"],
+  ["PS-STL-02+03", "One batched deposit settles two Paystream payouts.", "#/payouts"],
+  ["ORD-3008", "Chargeback won: the reversal is matched on both sides, so no exception.", "#/disputes"],
+];
+let fcTimer = null;
+
+function pageLanding() {
+  const run = S.summary?.run, st = run?.stats || {}, ing = run?.pipeline?.ingestion || {};
+  const lastRun = run?.id || 1;
+  const reports = run?.reports || [];
+  const clean = reports.reduce((t, r) => t + r.clean, 0), recs = reports.reduce((t, r) => t + r.records, 0);
+  const active = S.exceptions.filter(e => ["open", "investigating", "pending_approval"].includes(e.status)).length;
+  const N = FEATURES.length;
+  $("#landing").innerHTML = `
+  <header class="l-nav"><div class="l-wrap">
+    <div class="logo" style="padding:0"><svg width="28" height="28" viewBox="0 0 30 30" aria-hidden="true"><circle cx="13" cy="13" r="9.5" fill="none" stroke="var(--logo)" stroke-width="3.2"/><path d="M20 20l7 7" stroke="#d64511" stroke-width="3.6" stroke-linecap="round"/><path d="M9 9v8h7" fill="none" stroke="var(--logo)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>LedgerLens</span></div>
+    <span style="flex:1"></span>
+    <a class="lk hide-sm" href="#l-problem" data-scroll>Problem</a><a class="lk hide-sm" href="#l-features" data-scroll>Features</a>
+    <a class="lk hide-sm" href="#l-how" data-scroll>How it works</a><a class="lk hide-sm" href="#l-try" data-scroll>Try it</a>
+    <button class="collapse" id="ltheme" title="Toggle dark mode" aria-label="Toggle dark mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>
+    <a class="btn primary" href="#/reports">Open dashboard →</a>
+  </div></header>
+
+  <section class="l-wrap l-hero">
+    <div>
+      <span class="eyebrow">● Intelligent payment reconciliation</span>
+      <h1>Every payment, <em>reconciled</em> and explained.</h1>
+      <p class="lead">LedgerLens matches your internal ledger, payment gateways and bank settlements, then finds what's missing, duplicated, delayed or mismatched. It tells you why in plain English and keeps a tamper-evident record of every decision.</p>
+      <div class="cta"><a class="btn primary lg" href="#/reports">Launch dashboard</a><a class="btn lg" href="#l-features" data-scroll>Explore features</a></div>
+      <div class="l-proof">
+        <span><b>${ing.ledger + ing.gateway + ing.bank || "–"}</b>records reconciled</span>
+        <span><b>${recs ? pct(clean / recs) : "–"}</b>reconcile cleanly</span>
+        <span><b>${st.discrepancies ?? "–"}</b>issues explained</span>
+        <span><b>${Math.round((st.matches?.avg_confidence || 0) * 100)}%</b>avg. match confidence</span>
+      </div>
+    </div>
+    <div class="hero-card" aria-hidden="true">
+      <div class="src3">
+        <div class="hc-row"><span class="ico ledger">.csv</span><span><b>Internal ledger</b><br><span class="muted">ORD-1032 · charge</span></span><b>84.20</b></div>
+        <div class="hc-row"><span class="ico gateway">G</span><span><b>NovaPay</b><br><span class="muted">WEB-CHK-5521 · ch_1032A</span></span><b>80.00</b></div>
+        <div class="hc-row"><span class="ico bank">B</span><span><b>Northbank</b><br><span class="muted">payout po_7Hq2E</span></span><b class="muted">—</b></div>
+      </div>
+      <div class="hc-merge">▼ LEDGERLENS ▼</div>
+      <div class="hc-result"><div class="t">Candidate match · 73% confidence</div>
+        <div class="muted" style="font-size:13px;line-height:1.5">Amount differs by 4.20 · same time · reference similarity 14%. This is below the 80% auto-match threshold, so it's <b style="color:var(--accent)">sent to human review</b>.</div></div>
+    </div>
+  </section>
+
+  <section class="l-sec" id="l-problem"><div class="l-wrap">
+    <span class="eyebrow">The problem</span>
+    <h2>One payment, three versions of the truth.</h2>
+    <p class="sub">A merchant's order book, its gateway report and its bank statement each describe the same money differently. Fees, delays, retries and refunds break simple spreadsheet matching.</p>
+    <div class="problem">
+      <div class="pcard"><div class="n">3</div><h3>independent sources</h3><p>Ledger, gateway and bank use different references, timestamps and amounts (gross vs. net) for the same transaction.</p></div>
+      <div class="pcard"><div class="n">T+2</div><h3>settlement lag</h3><p>Payouts batch many transactions, arrive days later, sometimes split or merged, sometimes short.</p></div>
+      <div class="pcard"><div class="n">∞</div><h3>edge cases</h3><p>Duplicate webhooks, double charges, partial refunds, chargebacks and fee drift all look like errors to a VLOOKUP.</p></div>
+    </div>
+  </div></section>
+
+  <section class="l-sec" id="l-features" style="padding-top:20px"><div class="l-wrap">
+    <span class="eyebrow">Features</span>
+    <h2>Ten capabilities, one engine.</h2>
+    <p class="sub">Hover or tap a panel to expand it. Each one links to a real example in the demo data.</p>
+    <div class="fc" id="fc" role="tablist" aria-label="Features">
+      ${FEATURES.map((f, i) => `<div class="fc-panel ${i === 0 ? "on" : ""}" style="--g:${f.g}" data-i="${i}" role="tab" tabindex="0" aria-selected="${i === 0}" aria-label="${esc(f.t)}">
+        <span class="num">${String(i + 1).padStart(2, "0")}</span><span class="vt">${esc(f.t)}</span>
+        <div class="fc-body"><div><div class="ic">${svgI(f.i)}</div><h3>${esc(f.t)}</h3><p>${esc(f.d)}</p><ul>${f.b.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div><div></div>
+          <div class="fc-demo"><span>${esc(f.demo[0])}</span><a href="${f.demo[1].replace("LAST", lastRun)}">See it live →</a></div></div>
+      </div>`).join("")}
+    </div>
+    <div class="fc-ctrl"><button class="fc-arrow" data-dir="-1" aria-label="Previous feature">‹</button>
+      <div class="fc-dots">${FEATURES.map((f, i) => `<button class="${i === 0 ? "on" : ""}" data-dot="${i}" aria-label="${esc(f.t)}"></button>`).join("")}</div>
+      <span class="fc-count" id="fccount">01 / ${N}</span><button class="fc-arrow" data-dir="1" aria-label="Next feature">›</button></div>
+  </div></section>
+
+  <section class="l-sec" id="l-how"><div class="l-wrap">
+    <span class="eyebrow">How it works</span>
+    <h2>From three files to one explained answer.</h2>
+    <p class="sub">Each stage narrows what's left for the next, and everything ends up in an audit trail.</p>
+    <div class="flow">
+      <div><b>Ingest</b>CSV feeds or the bank API: any number of gateways and accounts</div>
+      <div><b>Normalise</b>Column aliases, cents, dates; references and duplicates cleaned</div>
+      <div><b>Match</b>Exact → composite → aggregate (1:N / N:1)</div>
+      <div><b>Score</b>Probabilistic candidates with explainable factors</div>
+      <div><b>Classify</b>21 discrepancy types with severity and cause</div>
+      <div><b>Review</b>Exception queue, maker-checker approvals</div>
+      <div><b>Audit</b>SHA-256 hash-chained, append-only history</div>
+    </div>
+    <div style="margin-top:16px"><a class="btn" href="#/pipeline">See the live pipeline diagram →</a></div>
+  </div></section>
+
+  <section class="l-sec" style="padding-top:20px"><div class="l-wrap">
+    <span class="eyebrow">Live from the latest run</span>
+    <h2>${run ? `Run #${run.id} · as of ${dayFmt(run.as_of)}` : "No runs yet"}</h2>
+    <p class="sub">${(ing.gateways || []).join(" + ") || "Gateways"} into ${(ing.bank_accounts || []).join(" + ") || "bank accounts"}.</p>
+    <div class="live">
+      <div class="kpi"><div class="l">Matches made</div><div class="v">${(st.matches?.exact || 0) + (st.matches?.fuzzy || 0)}</div><div class="s">${Object.keys(st.matches?.by_method || {}).length} matching methods used</div></div>
+      <div class="kpi"><div class="l">Active exceptions</div><div class="v">${active}</div><div class="s">${st.by_severity?.high || 0} high severity</div></div>
+      <div class="kpi"><div class="l">Open disputes</div><div class="v">${st.disputes?.open ?? 0}</div><div class="s">${st.disputes?.won ?? 0} won</div></div>
+      <div class="kpi"><div class="l">Money at issue</div><div class="v" style="font-size:22px">${amt(st.exposure || 0)}</div><div class="s">across all discrepancies</div></div>
+    </div>
+  </div></section>
+
+  <section class="l-sec" id="l-try" style="padding-top:20px"><div class="l-wrap">
+    <span class="eyebrow">Try it</span>
+    <h2>Six cases worth clicking.</h2>
+    <p class="sub">Each one is planted in the demo data to show a different part of the engine.</p>
+    <div class="scen">${LANDING_SCEN.map(([t, d, h]) => `<a href="${h}"><span class="tag">${esc(t)}</span><p>${esc(d)}</p></a>`).join("")}</div>
+    <div class="stack3" style="margin-top:28px">
+      <div class="term"><span class="c"># one command, no dependencies (Python 3.10+)</span><br><span class="p">$</span> python3 -m ledgerlens up<br><span class="c"># reconcile your own files</span><br><span class="p">$</span> python3 -m ledgerlens run --ledger l.csv \\<br>&nbsp;&nbsp;--gateway a.csv --gateway b.csv --bank x.csv<br><span class="p">$</span> python3 -m ledgerlens verify</div>
+      <div class="pcard"><h3>Built with</h3><p style="margin-bottom:12px">Pure Python standard library: SQLite, http.server and difflib. No framework, no build step, no external services. The dashboard is a single dependency-free HTML file.</p>
+        <div class="refs">${["Python 3", "SQLite", "SHA-256", "Vanilla JS", "Responsive", "Dark mode", "16 tests"].map(x => `<span class="ref">${x}</span>`).join("")}</div>
+        <div class="cta" style="margin-top:18px"><a class="btn primary" href="#/reports">Open dashboard</a><a class="btn" href="#/sources">Upload your data</a></div></div>
+    </div>
+  </div></section>
+  <footer class="l-foot"><div class="l-wrap" style="display:flex;gap:16px;flex-wrap:wrap"><span>LedgerLens: intelligent payment reconciliation</span><span style="flex:1"></span><span>Keyboard: <kbd>r</kbd> reports · <kbd>q</kbd> queue · <kbd>/</kbd> search</span></div></footer>`;
+
+  // ---- flex carousel behaviour
+  const fc = $("#fc"), panels = $$(".fc-panel", fc), dots = $$("[data-dot]");
+  const DUR = 6000;
+  document.documentElement.style.setProperty("--dur", DUR + "ms");
+  let cur = 0;
+  const show = i => {
+    cur = (i + N) % N;
+    panels.forEach((p, k) => { p.classList.toggle("on", k === cur); p.setAttribute("aria-selected", k === cur); });
+    dots.forEach((d, k) => { d.classList.remove("on"); if (k === cur) { void d.offsetWidth; d.classList.add("on"); } });
+    $("#fccount").textContent = `${String(cur + 1).padStart(2, "0")} / ${N}`;
+  };
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const start = () => { clearInterval(fcTimer); if (!reduce) fcTimer = setInterval(() => show(cur + 1), DUR); };
+  const stop = () => { clearInterval(fcTimer); fc.classList.add("paused"); };
+  panels.forEach((p, i) => {
+    p.addEventListener("click", e => { if (e.target.closest("a")) return; show(i); start(); });
+    p.addEventListener("mouseenter", () => { if (matchMedia("(hover: hover)").matches) { show(i); stop(); } });
+    p.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(i); }
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); show(cur + 1); panels[cur].focus(); }
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); show(cur - 1); panels[cur].focus(); }
+    });
+  });
+  fc.addEventListener("mouseleave", () => { fc.classList.remove("paused"); start(); });
+  let tx = null;
+  fc.addEventListener("touchstart", e => { tx = e.touches[0].clientX; stop(); }, { passive: true });
+  fc.addEventListener("touchend", e => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1)); tx = null; fc.classList.remove("paused"); start(); });
+  dots.forEach(d => d.onclick = () => { show(+d.dataset.dot); start(); });
+  $$(".fc-arrow").forEach(b => b.onclick = () => { show(cur + +b.dataset.dir); start(); });
+  show(0); start();
+
+  $$("[data-scroll]").forEach(a => a.onclick = e => { e.preventDefault(); document.querySelector(a.getAttribute("href"))?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
+  $("#ltheme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+}
 /* ---------- router ---------- */
 async function route() {
   const [page, a, b] = location.hash.slice(2).split("/");
+  const landing = !page || page === "home";
+  $("#landing").hidden = !landing; $("#app").hidden = landing;
+  clearInterval(fcTimer);
+  if (landing) { document.title = "LedgerLens · Intelligent payment reconciliation"; return pageLanding(); }
+  document.title = "LedgerLens";
   renderNav();
   $$(".pop").forEach(p => p.remove());
   try {
@@ -823,7 +1128,7 @@ async function route() {
     ({ queue: pageQueue, approvals: pageApprovals, disputes: pageDisputes, aging: pageAging, trace: pageTrace, payouts: pagePayouts, pipeline: pagePipeline, sources: pageSources, audit: pageAudit }[page] || pageReports)();
   } catch (e) { $("#page").innerHTML = `<div class="empty">Could not load: ${esc(e.message)}</div>`; }
 }
-window.addEventListener("hashchange", () => { S.q = ""; S.tab = "disc"; route(); window.scrollTo(0, 0); });
+window.addEventListener("hashchange", () => { if (location.hash.startsWith("#l-")) return; S.q = ""; S.tab = "disc"; route(); window.scrollTo(0, 0); });
 $("#collapse").onclick = () => { $("#app").classList.toggle("collapsed"); lsSet("ll_collapsed", $("#app").classList.contains("collapsed") ? "1" : ""); };
 if (lsGet("ll_collapsed")) $("#app").classList.add("collapsed");
 const setTheme = t => { document.documentElement.dataset.theme = t; lsSet("ll_theme", t); };

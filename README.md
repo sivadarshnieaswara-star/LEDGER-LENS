@@ -9,7 +9,7 @@ It runs on Python 3.10+ and uses only the standard library.
 ## Quick start
 
 ```bash
-python3 -m ledgerlens up        # builds demo data on first run, opens http://127.0.0.1:8765
+python3 -m ledgerlens up        # builds demo data on first run, opens the intro page at http://127.0.0.1:8765
 ```
 
 It needs Python 3.10+ and nothing else: no `pip install`, no database server.
