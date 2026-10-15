@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LedgerLens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --canvas: #efeeec; --panel: #ffffff; --ink: #17181a; --ink-2: #3c3f44; --muted: #6b6f76;
+  --line: #ebeae7; --row: #f7f7f6; --nav-active: #dbd1c6;
+  --accent: #d64511; --accent-ink: #fff; --accent-soft: #fdeee7;
+  --navy: #0e2747; --navy-ink: #b9d3f5;
+  --high: #c0261b; --high-soft: #fdecea; --med: #a35f00; --med-soft: #fdf2df;
+  --low: #50606f; --low-soft: #edf1f5; --ok: #23843f; --ok-soft: #e7f4ea;
+  --shadow: 0 1px 2px rgba(20,20,20,.05), 0 4px 18px rgba(20,20,20,.05);
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--canvas); color: var(--ink); font: 14px/1.45 Figtree, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+button { font: inherit; color: inherit; }
+.app { display: grid; grid-template-columns: 252px minmax(0, 1fr); gap: 16px; padding: 16px; min-height: 100vh; }
+.app.collapsed { grid-template-columns: 76px minmax(0, 1fr); }
+
+/* sidebar */
+.side { background: var(--panel); border-radius: 16px; padding: 22px 14px 16px; display: flex; flex-direction: column;
+  position: sticky; top: 16px; height: calc(100vh - 32px); overflow: auto; }
+.logo { display: flex; align-items: center; gap: 10px; padding: 0 8px 26px; font-weight: 700; font-size: 17px; letter-spacing: -.02em; }
+.logo svg { flex: none; }
+.nav { display: flex; flex-direction: column; gap: 4px; }
+.nav a, .nav button.navrow { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-radius: 10px; color: var(--ink-2);
+  text-decoration: none; font-weight: 500; border: 0; background: none; cursor: pointer; text-align: left; width: 100%; }
+.nav a:hover { background: var(--row); }
+.nav a.on { background: var(--nav-active); color: var(--ink); font-weight: 600; }
+.nav svg { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.nav .count { margin-left: auto; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700;
+  padding: 1px 7px; border-radius: 999px; }
+.nav .group { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
+.nav .group a { padding: 11px 14px; }
+.nav .chev { margin-left: auto; opacity: .7; }
+.side .foot { margin-top: auto; display: flex; justify-content: flex-end; padding-top: 16px; }
+.collapse { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--row); cursor: pointer; display: grid; place-items: center; }
+.collapsed .side .label, .collapsed .side .count, .collapsed .side .chev, .collapsed .logo span { display: none; }
+.collapsed .collapse svg { transform: rotate(180deg); }
+
+/* main */
+.main { background: var(--panel); border-radius: 16px; padding: 28px 18px 40px; min-width: 0; }
+.head { padding: 0 14px; margin-bottom: 22px; display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.head h1 { font-size: 20px; font-weight: 600; margin: 0 0 14px; letter-spacing: -.01em; }
+.head p { margin: 0; font-weight: 500; font-size: 15px; color: var(--ink-2); }
+.head .grow { flex: 1; }
+.crumb { color: var(--muted); font-weight: 500; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+.crumb:hover { color: var(--ink); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 18px; }
+.kpi { background: var(--panel); border-radius: 12px; box-shadow: var(--shadow); padding: 26px 18px 24px; }
+.kpi .l { color: var(--muted); font-size: 15px; margin-bottom: 14px; }
+.kpi .v { font-size: 22px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.kpi .s { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+.card { background: var(--panel); border-radius: 12px; box-shadow: var(--shadow); padding: 22px 16px 16px; margin-bottom: 18px; }
+.card > h2 { font-size: 17px; font-weight: 600; margin: 0 8px 18px; display: flex; align-items: center; gap: 10px; }
+.card > h2 .sub { color: var(--muted); font-weight: 400; font-size: 13.5px; }
+.tbox { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.filters { display: flex; align-items: center; gap: 8px; padding: 10px 12px; flex-wrap: wrap; position: relative; }
+.filters .lbl { color: var(--ink-2); font-size: 15px; margin-right: 2px; }
+.fchip { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 6px; padding: 5px 9px; font-size: 15px; cursor: pointer; }
+.fchip.ghost { background: var(--accent-soft); color: var(--accent); }
+.fchip .n { background: rgba(255,255,255,.25); border-radius: 4px; padding: 0 5px; margin-left: 6px; font-size: 12px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 4px 11px; font-size: 13px; cursor: pointer; }
+.chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.chip .n { opacity: .65; margin-left: 4px; }
+.pop { position: absolute; top: 46px; z-index: 20; background: var(--panel); border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.14);
+  border: 1px solid var(--line); padding: 10px; min-width: 260px; }
+.pop label { display: flex; gap: 8px; align-items: center; padding: 6px 4px; cursor: pointer; }
+.pop .row { display: flex; gap: 8px; align-items: center; padding: 4px; }
+.pop .actions { display: flex; justify-content: space-between; padding: 8px 4px 2px; }
+input[type=search], input[type=text], input[type=date], textarea, select { font: inherit; color: var(--ink); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+input[type=search] { min-width: 240px; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 600; font-size: 15px; padding: 14px 12px; }
+td { padding: 0 12px; height: 64px; vertical-align: middle; }
+tbody tr:nth-child(odd) td { background: var(--row); }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover td { background: #f0eeeb; }
+.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.r { text-align: right; }
+.mono { font-family: var(--mono); font-size: 12.5px; }
+.muted { color: var(--muted); }
+.src { display: inline-flex; align-items: center; gap: 12px; font-weight: 500; }
+.ico { width: 20px; height: 20px; border-radius: 4px; display: inline-grid; place-items: center; color: #fff; font-size: 10px; font-weight: 700; flex: none; }
+.ico.ledger { background: #2fb36a; font-size: 6px; letter-spacing: .02em; align-items: end; padding-bottom: 2px; }
+.ico.gateway { background: #6a4cf5; }
+.ico.bank { background: var(--navy); }
+.sev { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 3px 8px; border-radius: 5px; }
+.sev.high { color: var(--high); background: var(--high-soft); }
+.sev.medium { color: var(--med); background: var(--med-soft); }
+.sev.low { color: var(--low); background: var(--low-soft); }
+.st { font-size: 13px; font-weight: 500; white-space: nowrap; }
+.st::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 7px; vertical-align: 1px; }
+.st.open { color: var(--high); } .st.investigating { color: var(--med); }
+.st.resolved, .st.auto_cleared, .st.settled { color: var(--ok); } .st.accepted { color: var(--low); }
+.st.in_transit { color: var(--med); } .st.missing { color: var(--high); }
+.kind { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.pct { display: inline-flex; align-items: center; gap: 10px; }
+.bar { width: 64px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--ok); }
+.bar.mid i { background: var(--med); } .bar.lowv i { background: var(--high); }
+.method { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--low-soft); color: var(--low); white-space: nowrap; }
+.method.probabilistic { background: var(--med-soft); color: var(--med); }
+.method.manual { background: var(--accent-soft); color: var(--accent); }
+.empty { padding: 44px; text-align: center; color: var(--muted); }
+.tabs2 { display: inline-flex; background: var(--row); border-radius: 9px; padding: 3px; margin: 0 8px 14px; }
+.tabs2 button { border: 0; background: none; padding: 6px 14px; border-radius: 7px; cursor: pointer; font-weight: 500; color: var(--muted); }
+.tabs2 button.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 500; text-decoration: none; color: var(--ink); display: inline-block; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn:disabled { opacity: .5; cursor: progress; }
+.banner { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 10px; margin-bottom: 16px; font-weight: 500; }
+.banner.ok { background: var(--ok-soft); color: var(--ok); } .banner.bad { background: var(--high-soft); color: var(--high); }
+
+/* drawer */
+.scrim { position: fixed; inset: 0; background: rgba(20,20,20,.25); z-index: 40; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(500px, 100vw); background: var(--panel); z-index: 41;
+  box-shadow: -10px 0 40px rgba(0,0,0,.12); overflow: auto; padding: 24px 26px 40px; }
+.drawer h2 { font-size: 18px; margin: 10px 0 8px; line-height: 1.35; }
+.drawer h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; font-weight: 600; }
+.drawer p { margin: 0 0 8px; color: var(--ink-2); }
+.x { float: right; border: 0; background: var(--row); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px; line-height: 1; }
+.suggest { background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; color: var(--ink); }
+.refs { display: flex; flex-wrap: wrap; gap: 6px; }
+.ref { font-family: var(--mono); font-size: 12px; background: var(--row); border-radius: 6px; padding: 3px 8px; }
+.ref b { font-family: Figtree, sans-serif; font-weight: 500; color: var(--muted); }
+.cand { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; }
+.cand .score { font-size: 20px; font-weight: 700; }
+.cand .why { grid-column: 1 / -1; color: var(--muted); font-size: 12.5px; }
+.form { display: grid; gap: 8px; }
+.form textarea { min-height: 64px; resize: vertical; }
+.acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.err { color: var(--high); min-height: 18px; font-size: 13px; }
+.timeline { list-style: none; margin: 0; padding: 0 0 0 4px; border-left: 2px solid var(--line); }
+.timeline li { padding: 0 0 14px 16px; position: relative; }
+.timeline li::before { content: ""; position: absolute; left: -7px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); }
+.timeline .who { font-weight: 600; }
+.timeline .when, .timeline .hash { color: var(--muted); font-size: 12px; }
+.timeline .hash { font-family: var(--mono); font-size: 10.5px; }
+
+/* traces */
+.chain { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px 12px; }
+.chain:nth-child(odd) { background: var(--row); }
+.chain .hd { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.node { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; font-size: 13px; }
+.node .t { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 3px; }
+.node.none { border-style: dashed; color: var(--muted); background: transparent; }
+.node.bad { border-color: var(--high); box-shadow: inset 3px 0 0 var(--high); }
+.link { color: var(--accent); cursor: pointer; font-family: var(--mono); font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
+.pill { font-size: 12px; padding: 2px 9px; border-radius: 999px; font-weight: 600; }
+.pill.settled { background: var(--ok-soft); color: var(--ok); }
+.pill.exception, .pill.missing { background: var(--high-soft); color: var(--high); }
+.pill.in_transit, .pill.unmatched { background: var(--med-soft); color: var(--med); }
+
+/* pipeline */
+.pipe { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+.pipe svg { width: 100%; height: auto; display: block; }
+.pipe .box { cursor: pointer; }
+.pipe .box:hover rect { stroke: var(--accent); stroke-width: 2; }
+.legend dt { font-weight: 600; margin-top: 12px; }
+.legend dd { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+/* sources */
+.srcgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 18px; }
+.srccard { border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+.srccard h3 { margin: 0 0 6px; font-size: 15px; display: flex; gap: 10px; align-items: center; }
+.srccard .path { font-family: var(--mono); font-size: 12px; color: var(--muted); word-break: break-all; }
+.runform { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; padding: 0 8px; }
+.runform label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); font-weight: 500; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--panel); padding: 7px 12px; cursor: pointer; }
+.seg button.on { background: var(--ink); color: #fff; }
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 18px;
+  border-radius: 10px; z-index: 60; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
+
+@media (max-width: 900px) {
+  .app, .app.collapsed { grid-template-columns: 1fr; padding: 10px; gap: 10px; }
+  .side { position: static; height: auto; padding: 14px; }
+  .logo { padding-bottom: 10px; }
+  .nav { flex-direction: row; overflow-x: auto; gap: 4px; }
+  .nav a { white-space: nowrap; padding: 8px 12px; }
+  .nav .group { border: 0; margin: 0; padding: 0; display: contents; }
+  .nav .chev, .side .foot { display: none; }
+  .main { padding: 20px 6px 30px; }
+  .head { padding: 0 10px; }
+  .hide-sm { display: none; }
+  input[type=search] { min-width: 0; width: 100%; }
+  .chain { grid-template-columns: 1fr 1fr; }
+  .pipe { grid-template-columns: 1fr; }
+  td { height: auto; padding: 12px 10px; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="side">
+    <div class="logo">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="13" cy="13" r="9.5" fill="none" stroke="#17181a" stroke-width="3.2"/><path d="M20 20l7 7" stroke="#d64511" stroke-width="3.6" stroke-linecap="round"/><path d="M9 9v8h7" fill="none" stroke="#17181a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>LedgerLens</span>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot"><button class="collapse" id="collapse" title="Collapse sidebar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button></div>
+  </aside>
+  <main class="main" id="page"></main>
+</div>
+<div id="overlay"></div>
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const amt = (c, ccy = "USD") => (c < 0 ? "−" : "") + (Math.abs(c) / 100).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " " + (ccy || "USD");
+const pct = x => (x * 100).toFixed(1) + "%";
+const dayFmt = d => d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"}) : "";
+const when = iso => iso ? new Date(iso).toLocaleString("en-GB", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : "";
+const api = async (p, opt) => { const r = await fetch(p, opt); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j; };
+const post = (p, body) => api(p, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 2800); }
+
+const ICON = {
+  reports: '<path d="M8 3h8l4 4v13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M16 3v4h4"/><path d="M4 7v13a1 1 0 0 0 1 1h1"/>',
+  queue: '<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>',
+  trace: '<circle cx="5" cy="12" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 11l10-4M7 13l10 4"/>',
+  payouts: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/><path d="M7 15h3"/>',
+  pipeline: '<rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="8.5" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v3h11V8M12 11v5"/>',
+  sources: '<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/>',
+  audit: '<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+};
+const svgI = k => `<svg viewBox="0 0 24 24">${ICON[k]}</svg>`;
+const CHEV = '<svg class="chev" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M9 6l6 6-6 6"/></svg>';
+const SRC_ICON = { "Internal ledger": '<span class="ico ledger">.csv</span>', "Gateway settlement feed": '<span class="ico gateway">G</span>', "Bank settlement": '<span class="ico bank">B</span>' };
+const src = name => `<span class="src">${SRC_ICON[name] || ""}${esc(name)}</span>`;
+
+const S = { summary: null, exceptions: [], reports: [], filters: { pairs: [], from: "", to: "" }, qStatus: "active", qSev: "", q: "", tab: "disc" };
+
+async function refresh() {
+  const [summary, exceptions, reports] = await Promise.all([api("/api/summary"), api("/api/exceptions"), api("/api/reports")]);
+  Object.assign(S, { summary, exceptions, reports });
+  renderNav();
+}
+
+function renderNav() {
+  const route = location.hash.slice(2).split("/")[0] || "reports";
+  const active = S.exceptions.filter(e => ["open", "investigating"].includes(e.status)).length;
+  const item = (k, label, extra = "") => `<a href="#/${k}" class="${route === k ? "on" : ""}">${svgI(k)}<span class="label">${label}</span>${extra}</a>`;
+  $("#nav").innerHTML = item("reports", "Reconciliation") + item("queue", "Exception queue", active ? `<span class="count">${active}</span>` : "")
+    + item("trace", "Follow the money") + item("payouts", "Payouts")
+    + `<div class="group">${item("pipeline", "Pipeline", CHEV)}${item("sources", "Data sources", CHEV)}${item("audit", "Audit trail", CHEV)}</div>`;
+}
+
+const head = (title, sub, right = "") => `<div class="head"><div><h1>${title}</h1><p>${sub}</p></div><div class="grow"></div>${right}</div>`;
+const kpis = list => `<section class="kpis">${list.map(([l, v, s]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ""}</div>`).join("")}</section>`;
+const barCls = x => x >= .9 ? "" : x >= .7 ? "mid" : "lowv";
+const pctCell = x => `<span class="pct"><span class="bar ${barCls(x)}"><i style="width:${(x * 100).toFixed(1)}%"></i></span>${pct(x)}</span>`;
+
+/* ---------- Reconciliation reports ---------- */
+function filteredReports() {
+  const f = S.filters;
+  return S.reports.filter(r => (!f.pairs.length || f.pairs.includes(r.pair)) && (!f.from || r.as_of >= f.from) && (!f.to || r.as_of <= f.to));
+}
+
+function pageReports() {
+  const rows = filteredReports();
+  const latestId = rows.length ? Math.max(...rows.map(r => r.run_id)) : null;
+  const latest = rows.filter(r => r.run_id === latestId);
+  const recon = latest.reduce((t, r) => t + r.reconciled_amount, 0);
+  const clean = latest.reduce((t, r) => t + r.clean, 0), recs = latest.reduce((t, r) => t + r.records, 0);
+  const diff = latest.reduce((t, r) => t + r.mismatched_amount, 0);
+  const ccy = latest[0]?.currency || "USD";
+  const f = S.filters;
+  const nPairs = f.pairs.length, nDate = (f.from ? 1 : 0) + (f.to ? 1 : 0);
+  $("#page").innerHTML = head("Reconciliation", "Review the accuracy by reconciling from multiple sources",
+      `<a class="btn" href="#/sources">Run reconciliation</a>`)
+    + kpis([["Total reconciled amount", amt(recon, ccy), latestId ? `Run #${latestId} · both source pairs` : "No runs yet"],
+            ["Matched percentage", recs ? pct(clean / recs) : "–", recs ? `${clean} of ${recs} records reconcile cleanly` : ""],
+            ["Amount difference", amt(diff, ccy), "Money sitting in discrepancies"]])
+    + `<div class="card"><h2>Reconciliation reports</h2>
+      <div class="tbox">
+        <div class="filters" id="filters"><span class="lbl">Filter by</span>
+          <button class="fchip" data-pop="source">Source${nPairs ? `<span class="n">${nPairs}</span>` : ""}</button>
+          <button class="fchip" data-pop="date">Date${nDate ? `<span class="n">${nDate}</span>` : ""}</button>
+          ${nPairs || nDate ? `<button class="fchip ghost" id="clearf">Clear</button>` : ""}
+        </div>
+        ${rows.length ? `<table><thead><tr><th>Source A</th><th>Source B</th><th>Matched</th><th>Mismatched</th><th class="hide-sm">Issues</th><th>Creation Date</th></tr></thead><tbody>
+        ${rows.map(r => `<tr class="click" data-href="#/reports/${r.run_id}/${r.pair}">
+          <td>${src(r.source_a)}</td><td>${src(r.source_b)}</td>
+          <td class="num">${pct(r.matched_pct)}</td><td class="num">${amt(r.mismatched_amount, r.currency)}</td>
+          <td class="hide-sm num">${r.discrepancies}</td>
+          <td class="num">${dayFmt(r.as_of)}<div class="kind" style="font-family:inherit">Run #${r.run_id}${r.label ? " · " + esc(r.label) : ""}</div></td></tr>`).join("")}
+        </tbody></table>` : `<div class="empty">No reports match. ${S.reports.length ? "Clear the filters." : "Run a reconciliation from Data sources."}</div>`}
+      </div></div>`;
+  $$("tr[data-href]").forEach(tr => tr.onclick = () => location.hash = tr.dataset.href);
+  $("#clearf") && ($("#clearf").onclick = () => { S.filters = { pairs: [], from: "", to: "" }; pageReports(); });
+  $$("[data-pop]").forEach(b => b.onclick = e => { e.stopPropagation(); openPop(b); });
+}
+
+function openPop(btn) {
+  $$(".pop").forEach(p => p.remove());
+  const box = $("#filters"), f = S.filters, pop = document.createElement("div");
+  pop.className = "pop";
+  pop.style.left = (btn.offsetLeft) + "px";
+  if (btn.dataset.pop === "source") {
+    pop.innerHTML = [["ledger_gateway", "Internal ledger ↔ Gateway feed"], ["gateway_bank", "Gateway feed ↔ Bank settlement"]]
+      .map(([k, l]) => `<label><input type="checkbox" value="${k}" ${f.pairs.includes(k) ? "checked" : ""}> ${l}</label>`).join("")
+      + `<div class="actions"><button class="btn" data-x>Cancel</button><button class="btn primary" data-ok>Apply</button></div>`;
+  } else {
+    pop.innerHTML = `<div class="row"><span class="muted" style="width:40px">From</span><input type="date" id="dfrom" value="${f.from}"></div>
+      <div class="row"><span class="muted" style="width:40px">To</span><input type="date" id="dto" value="${f.to}"></div>
+      <div class="actions"><button class="btn" data-x>Cancel</button><button class="btn primary" data-ok>Apply</button></div>`;
+  }
+  box.append(pop);
+  pop.onclick = e => e.stopPropagation();
+  $("[data-x]", pop).onclick = () => pop.remove();
+  $("[data-ok]", pop).onclick = () => {
+    if (btn.dataset.pop === "source") f.pairs = $$("input:checked", pop).map(i => i.value);
+    else { f.from = $("#dfrom").value; f.to = $("#dto").value; }
+    pageReports();
+  };
+}
+document.addEventListener("click", () => $$(".pop").forEach(p => p.remove()));
+
+async function pageReport(runId, pair) {
+  const r = await api(`/api/reports/${runId}/${pair}`);
+  const tab = S.tab;
+  $("#page").innerHTML = `<div class="head"><div><a class="crumb" href="#/reports">‹ Reconciliation reports</a>
+      <h1 style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${src(r.source_a)} <span class="muted">↔</span> ${src(r.source_b)}</h1>
+      <p>Run #${r.run.id}${r.run.label ? " · " + esc(r.run.label) : ""} · as of ${dayFmt(r.run.as_of)}</p></div></div>`
+    + kpis([["Reconciled amount", amt(r.reconciled_amount, r.currency)], ["Matched percentage", pct(r.matched_pct), `${r.clean} of ${r.records} records clean`],
+            ["Amount difference", amt(r.mismatched_amount, r.currency), `${r.discrepancies.length} discrepancies`]])
+    + `<div class="card"><div class="tabs2"><button data-t="disc" class="${tab === "disc" ? "on" : ""}">Discrepancies (${r.discrepancies.length})</button>
+         <button data-t="match" class="${tab === "match" ? "on" : ""}">Matched records (${r.matches.length})</button></div>
+       <div class="tbox">${tab === "disc" ? discTable(r.discrepancies) : matchTable(r.matches)}</div></div>`;
+  $$("[data-t]").forEach(b => b.onclick = () => { S.tab = b.dataset.t; pageReport(runId, pair); });
+  bindRows();
+}
+
+function discTable(list) {
+  if (!list.length) return `<div class="empty">No discrepancies. Everything reconciled.</div>`;
+  return `<table><thead><tr><th>Severity</th><th>Issue</th><th class="r">Impact</th><th class="hide-sm">Status</th></tr></thead><tbody>
+    ${list.map(e => `<tr class="click" data-fp="${esc(e.fingerprint)}"><td><span class="sev ${e.severity}">${e.severity}</span></td>
+      <td><div>${esc(e.summary)}</div><div class="kind">${esc(e.kind)}${e.assignee ? " · @" + esc(e.assignee) : ""}${e.candidates?.length && ["open","investigating"].includes(e.status) ? ` · <span style="color:var(--accent)">${e.candidates.length} candidate${e.candidates.length > 1 ? "s" : ""} to review</span>` : ""}</div></td>
+      <td class="r num">${e.amount_delta ? amt(e.amount_delta, e.currency || "USD") : "–"}</td>
+      <td class="hide-sm"><span class="st ${e.status}">${e.status.replace("_", " ")}</span></td></tr>`).join("")}</tbody></table>`;
+}
+
+function matchTable(list) {
+  if (!list.length) return `<div class="empty">No matches in this run.</div>`;
+  return `<table><thead><tr><th>Source A</th><th>Source B</th><th>Method</th><th>Confidence</th><th class="hide-sm">Why</th></tr></thead><tbody>
+    ${list.map(m => `<tr><td class="mono">${m.left_ids.map(esc).join(", ")}</td><td class="mono">${m.right_ids.map(esc).join(", ")}</td>
+      <td><span class="method ${m.method}">${esc(m.method)}</span></td><td>${pctCell(m.confidence)}</td>
+      <td class="hide-sm muted" style="font-size:13px">${esc(m.explanation)}</td></tr>`).join("")}</tbody></table>`;
+}
+
+function bindRows() { $$("tr[data-fp]").forEach(r => r.onclick = () => openDrawer(r.dataset.fp)); }
+
+/* ---------- Exception queue ---------- */
+function pageQueue() {
+  const isActive = e => ["open", "investigating"].includes(e.status);
+  const active = S.exceptions.filter(isActive);
+  const money = active.filter(e => !["DUPLICATE_WEBHOOK", "DELAYED_SETTLEMENT", "REFERENCE_MISMATCH"].includes(e.kind)).reduce((t, e) => t + Math.abs(e.amount_delta), 0);
+  const cands = active.filter(e => e.candidates?.length).length;
+  const STAT = [["active", "Active"], ["open", "Open"], ["investigating", "Investigating"], ["resolved", "Resolved"], ["accepted", "Accepted"], ["auto_cleared", "Auto-cleared"], ["", "All"]];
+  const match = (e, st) => st === "" || (st === "active" ? isActive(e) : e.status === st);
+  const rows = S.exceptions.filter(e => match(e, S.qStatus) && (!S.qSev || e.severity === S.qSev)
+    && (!S.q || (e.summary + e.fingerprint + JSON.stringify(e.refs)).toLowerCase().includes(S.q.toLowerCase())));
+  $("#page").innerHTML = head("Exception queue", "Classified discrepancies awaiting human review and resolution")
+    + kpis([["Awaiting review", active.length, `${active.filter(e => e.severity === "high").length} high severity`],
+            ["Candidate matches", cands, "Probabilistic suggestions to confirm"],
+            ["Money at issue", amt(money), "Across active exceptions"]])
+    + `<div class="card"><div class="filters" style="padding:0 8px 14px">
+        ${STAT.map(([k, l]) => `<button class="chip ${S.qStatus === k ? "on" : ""}" data-st="${k}">${l}<span class="n">${S.exceptions.filter(e => match(e, k)).length}</span></button>`).join("")}
+        <span style="width:8px"></span>
+        ${["high", "medium", "low"].map(s => `<button class="chip ${S.qSev === s ? "on" : ""}" data-sv="${s}">${s}</button>`).join("")}
+        <span style="flex:1"></span><input type="search" id="q" placeholder="Search order, txn, payout…" value="${esc(S.q)}"></div>
+      <div class="tbox">${discTable(rows)}</div></div>`;
+  $$("[data-st]").forEach(b => b.onclick = () => { S.qStatus = b.dataset.st; pageQueue(); });
+  $$("[data-sv]").forEach(b => b.onclick = () => { S.qSev = S.qSev === b.dataset.sv ? "" : b.dataset.sv; pageQueue(); });
+  const q = $("#q"); q.oninput = () => { S.q = q.value; const p = q.selectionStart; pageQueue(); const n = $("#q"); n.focus(); n.setSelectionRange(p, p); };
+  bindRows();
+}
+
+/* ---------- Drawer: human review ---------- */
+const ACTIONS = {
+  investigate: { from: ["open"], label: "Investigate" },
+  resolve: { from: ["open", "investigating"], label: "Resolve", primary: true },
+  accept: { from: ["open", "investigating"], label: "Accept as-is" },
+  reopen: { from: ["resolved", "accepted", "auto_cleared"], label: "Reopen" },
+  assign: { label: "Assign" }, comment: { label: "Comment" },
+};
+async function openDrawer(fp) {
+  const e = await api("/api/exceptions/" + encodeURIComponent(fp));
+  const open = ["open", "investigating"].includes(e.status);
+  $("#overlay").innerHTML = `<div class="scrim"></div><aside class="drawer" role="dialog" aria-label="Exception detail">
+    <button class="x" aria-label="Close">×</button>
+    <span class="sev ${e.severity}">${e.severity}</span> <span class="kind" style="display:inline">${esc(e.kind)}</span>
+    <h2>${esc(e.summary)}</h2>
+    <p><span class="st ${e.status}">${e.status.replace("_", " ")}</span>${e.assignee ? ` · assigned to <b>${esc(e.assignee)}</b>` : ""}${e.amount_delta ? ` · impact <b>${amt(e.amount_delta, e.currency)}</b>` : ""}</p>
+    <h3>Why this was flagged</h3><p>${esc(e.explanation)}</p>
+    <h3>Suggested action</h3><p class="suggest">${esc(e.suggested_action)}</p>
+    ${e.candidates.length ? `<h3>Candidate matches · probabilistic</h3>${e.candidates.map(c => `
+      <div class="cand"><div><div class="mono">${esc(c.id)}</div><div>${esc(c.label)}</div></div>
+        <div style="text-align:right"><div class="score">${Math.round(c.score * 100)}%</div>${open ? `<button class="btn dark" data-link="${esc(c.id)}">Confirm match</button>` : ""}</div>
+        <div class="why">${c.reasons.map(esc).join(" · ")}</div></div>`).join("")}` : ""}
+    <h3>Records involved</h3>
+    <div class="refs">${Object.entries(e.refs).flatMap(([k, ids]) => ids.map(i => `<span class="ref"><b>${esc(k)}</b> ${esc(i)}</span>`)).join("")}</div>
+    <h3>Review</h3>
+    <div class="form">
+      <input type="text" id="actor" placeholder="Your name" value="${esc(lsGet("ll_actor") || "")}">
+      <textarea id="note" placeholder="Note: what you found or did. Required to resolve, accept, reopen, comment or assign."></textarea>
+      <div class="acts">${Object.entries(ACTIONS).filter(([, a]) => !a.from || a.from.includes(e.status)).map(([k, a]) => `<button class="btn ${a.primary ? "primary" : ""}" data-act="${k}">${a.label}</button>`).join("")}</div>
+      <div class="err" id="err"></div>
+    </div>
+    <h3>Audit trail</h3>
+    <ul class="timeline">${e.events.slice().reverse().map(ev => `<li>
+      <div><span class="who">${esc(ev.actor)}</span> ${esc(ev.action.replace("_", " "))} ${ev.from_status !== ev.to_status ? `<span class="muted">${esc(ev.from_status || "∅")} → ${esc(ev.to_status)}</span>` : ""}</div>
+      ${ev.note ? `<div>${esc(ev.note)}</div>` : ""}
+      <div class="when">${when(ev.ts)}${ev.run_id ? ` · run #${ev.run_id}` : ""}</div><div class="hash" title="SHA-256, chained to the previous event">#${esc(ev.hash.slice(0, 16))}</div></li>`).join("")}</ul>
+  </aside>`;
+  const close = () => { $("#overlay").innerHTML = ""; };
+  $(".scrim").onclick = close; $(".x").onclick = close;
+  document.onkeydown = k => { if (k.key === "Escape") close(); };
+  const send = async (action, candidate = "") => {
+    const actor = $("#actor").value.trim(), note = $("#note").value.trim();
+    lsSet("ll_actor", actor);
+    try {
+      await post(`/api/exceptions/${encodeURIComponent(fp)}/actions`, { action, actor, note: action === "assign" && !note ? actor : note, candidate });
+      await refresh(); route(); openDrawer(fp);
+      toast(action === "link" ? "Match confirmed. It will be used in the next run." : "Saved to audit trail");
+    } catch (err) { $("#err").textContent = err.message; }
+  };
+  $$("[data-act]").forEach(b => b.onclick = () => send(b.dataset.act));
+  $$("[data-link]").forEach(b => b.onclick = () => send("link", b.dataset.link));
+}
+
+/* ---------- Follow the money ---------- */
+async function pageTrace() {
+  const traces = await api("/api/traces");
+  const draw = () => {
+    const q = S.q.toLowerCase();
+    const list = traces.filter(t => !q || JSON.stringify(t).toLowerCase().includes(q));
+    const node = (t, inner, cls = "") => `<div class="node ${cls}"><div class="t">${t}</div>${inner}</div>`;
+    const sep = "<hr style='border:0;border-top:1px dashed var(--line);margin:6px 0'>";
+    $("#chains").innerHTML = list.map(t => {
+      const bad = new Set(t.discrepancies.map(f => f.split(":")[0]));
+      return `<div class="chain"><div class="hd"><b>${esc(t.ref)}</b><span class="pill ${t.status}">${t.status.replace("_", " ")}</span>
+          ${t.discrepancies.map(f => `<span class="link" data-fp="${esc(f)}">${esc(f.split(":")[0])}</span>`).join(" ")}</div>
+        ${t.ledger.length ? node("Internal ledger", t.ledger.map(l => `<div class="mono">${esc(l.id)}</div>${l.kind} ${amt(l.amount, l.currency)}`).join(sep), ["DUPLICATE_LEDGER_ENTRY", "AMOUNT_MISMATCH"].some(k => bad.has(k)) ? "bad" : "") : node("Internal ledger", "No entry", "none bad")}
+        ${t.gateway.length ? node("Gateway", t.gateway.map(g => `<div class="mono">${esc(g.id)}${g.copies > 1 ? ` ×${g.copies}` : ""}</div>${g.kind} ${amt(g.gross, g.currency)} · fee ${amt(g.fee, g.currency)}`).join(sep), ["DUPLICATE_CHARGE", "FEE_VARIANCE", "UNRECORDED_REFUND"].some(k => bad.has(k)) ? "bad" : "") : node("Gateway", "Not captured", "none bad")}
+        ${t.payouts.length ? node("Payout", t.payouts.map(p => `<div class="mono">${esc(p.id)}</div>due ${dayFmt(p.expected_date)} · <span class="st ${p.status}">${p.status.replace("_", " ")}</span>`).join(sep), t.payouts.some(p => p.status === "missing") ? "bad" : "") : node("Payout", "–", "none")}
+        ${t.payouts.some(p => p.bank_id) ? node("Bank", t.payouts.filter(p => p.bank_id).map(p => `<div class="mono">${esc(p.bank_id)}</div>received ${dayFmt(p.bank_date)}`).join(sep), ["PAYOUT_AMOUNT_MISMATCH", "DELAYED_SETTLEMENT"].some(k => bad.has(k)) ? "bad" : "") : node("Bank", "Not received", "none")}
+      </div>`; }).join("") || `<div class="empty">No matching orders.</div>`;
+    $$("#chains [data-fp]").forEach(el => el.onclick = () => openDrawer(el.dataset.fp));
+  };
+  $("#page").innerHTML = head("Follow the money", "Every order traced from ledger to gateway to payout to bank")
+    + `<div class="card"><div class="filters" style="padding:0 8px 14px"><input type="search" id="q" placeholder="Order ref, txn id, payout or bank ref…" value="${esc(S.q)}">
+        <span class="muted">${traces.length} orders · ${traces.filter(t => t.status !== "exception").length} fully reconciled</span></div>
+      <div class="tbox" id="chains"></div></div>`;
+  $("#q").oninput = e => { S.q = e.target.value; draw(); };
+  draw();
+}
+
+/* ---------- Payouts ---------- */
+function pagePayouts() {
+  const ps = S.summary.run?.payouts || [];
+  const settled = ps.filter(p => p.status === "settled");
+  $("#page").innerHTML = head("Payouts", "Gateway payouts matched against bank settlements")
+    + kpis([["Settled", `${settled.length} / ${ps.length}`, amt(settled.reduce((t, p) => t + (p.bank_amount || 0), 0))],
+            ["In transit", ps.filter(p => p.status === "in_transit").length, "Within the settlement window"],
+            ["Missing", ps.filter(p => p.status === "missing").length, amt(ps.filter(p => p.status === "missing").reduce((t, p) => t + p.expected_amount, 0))]])
+    + `<div class="card"><h2>Payout settlements</h2><div class="tbox"><table><thead><tr><th>Payout</th><th class="r">Expected</th><th class="hide-sm">Due</th><th>Bank line</th><th class="r">Received</th><th class="r">Gap</th><th>Status</th></tr></thead><tbody>
+    ${ps.map(p => { const gap = p.bank_amount == null ? null : p.bank_amount - p.expected_amount; return `<tr>
+      <td><span class="mono">${esc(p.id)}</span><div class="kind" style="font-family:inherit">${p.event_ids.length} transactions</div></td>
+      <td class="r num">${amt(p.expected_amount, p.currency)}</td><td class="hide-sm num">${dayFmt(p.expected_date)}</td>
+      <td><span class="mono">${esc(p.bank_id || "–")}</span><div class="kind" style="font-family:inherit">${p.bank_date ? dayFmt(p.bank_date) : ""}</div></td>
+      <td class="r num">${p.bank_amount == null ? "–" : amt(p.bank_amount, p.currency)}</td>
+      <td class="r num" style="color:${gap ? "var(--high)" : "var(--ok)"}">${gap == null ? "–" : gap ? amt(gap, p.currency) : "✓"}</td>
+      <td><span class="st ${p.status}">${p.status.replace("_", " ")}</span></td></tr>`; }).join("")}
+    </tbody></table></div></div>`;
+}
+
+/* ---------- Pipeline ---------- */
+function pagePipeline() {
+  const run = S.summary.run;
+  if (!run) { $("#page").innerHTML = head("Pipeline", "How records flow through LedgerLens") + `<div class="empty">No runs yet.</div>`; return; }
+  const p = run.pipeline, ing = p.ingestion || {}, det = p.deterministic || {}, pr = p.probabilistic || {}, q = p.queue || {};
+  const review = S.summary.review, human = Object.values(review.human_actions).reduce((a, b) => a + b, 0);
+  const active = S.exceptions.filter(e => ["open", "investigating"].includes(e.status)).length;
+  const classes = Object.keys(p.classifier || {}).length, total = Object.values(p.classifier || {}).reduce((a, b) => a + b, 0);
+  const bankApi = (run.sources.bank || "").startsWith("Bank API");
+  const B = (x, y, w, title, metric, href, stage) => `<g class="box" data-href="${href}" data-stage="${stage}" tabindex="0">
+    <rect x="${x}" y="${y}" width="${w}" height="74" rx="14" fill="#0e2747" stroke="#26446b"/>
+    <text x="${x + w / 2}" y="${y + 32}" text-anchor="middle" fill="#cfe2fb" font-size="17" font-weight="600">${title}</text>
+    <text x="${x + w / 2}" y="${y + 54}" text-anchor="middle" fill="#8fb0d9" font-size="13">${metric}</text></g>`;
+  const A = d => `<path d="${d}" fill="none" stroke="#9aa3ad" stroke-width="1.6" marker-end="url(#ah)"/>`;
+  const svg = `<svg viewBox="0 0 1040 950" role="img" aria-label="LedgerLens pipeline">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L8 5L1 9" fill="none" stroke="#9aa3ad" stroke-width="1.6"/></marker></defs>
+    ${A("M190,94 V117 H470 V138")}${A("M520,94 V138")}${A("M850,94 V117 H570 V138")}
+    ${A("M520,214 V258")}${A("M490,334 V378")}${A("M590,334 V356 H815 V378")}
+    ${A("M490,454 V498")}${A("M490,574 V618")}${A("M490,694 V738")}${A("M490,814 V858")}
+    ${B(40, 20, 300, bankApi ? "Bank API Simulator" : "Bank CSV or API Simulator", `${ing.bank} lines · ${bankApi ? "via API" : "via CSV"}`, "#/sources", "bank")}
+    ${B(380, 20, 280, "Gateway Settlement Feed", `${ing.gateway} events`, "#/sources", "gateway")}
+    ${B(700, 20, 300, "Internal Payment Ledger", `${ing.ledger} entries`, "#/sources", "ledger")}
+    ${B(370, 140, 300, "Ingestion and Normalization", `${ing.duplicates_removed} duplicates · ${ing.references_normalised} refs normalised`, "#/trace", "ingest")}
+    ${B(390, 260, 260, "Deterministic Matching", `${det.ledger_gateway + det.gateway_bank} exact · ${det.manual} reviewer links`, `#/reports/${run.id}/ledger_gateway`, "det")}
+    ${B(340, 380, 300, "Probabilistic Candidate Matching", `${pr.auto_matched + pr.payouts_matched} auto · ${pr.suggested} suggested`, "#/queue", "prob")}
+    ${B(680, 380, 280, "Reconciliation Reports", `${run.reports.length} source pairs`, "#/reports", "reports")}
+    ${B(345, 500, 290, "Discrepancy Classifier", `${total} discrepancies · ${classes} types`, "#/queue", "class")}
+    ${B(365, 620, 250, "Exception Queue", `${q.new || 0} new · ${q.auto_cleared || 0} auto-cleared`, "#/queue", "queue")}
+    ${B(355, 740, 270, "Human Review and Resolution", `${active} awaiting · ${human} actions`, "#/queue", "human")}
+    ${B(385, 860, 210, "Audit Trail", `${S.summary.audit.events} events · ${S.summary.audit.ok ? "chain ✓" : "BROKEN"}`, "#/audit", "audit")}
+  </svg>`;
+  $("#page").innerHTML = head("Pipeline", `Live view of run #${run.id} (${esc(run.label || "")}, as of ${dayFmt(run.as_of)})`)
+    + `<div class="pipe"><div class="card" style="padding:18px">${svg}</div>
+      <div class="card legend"><h2 style="margin:0 0 4px">Stages</h2><dl style="margin:0">
+        <dt>Ingestion and normalization</dt><dd>Column aliases, integer cents, and date formats. References like "ORD-01001" and "ord_1001" become "1001". Webhook replays and double-posted journals are removed.</dd>
+        <dt>Deterministic matching</dt><dd>Exact normalised reference (ledger ↔ gateway). Payout ID in the bank narrative (gateway ↔ bank). Links confirmed by reviewers.</dd>
+        <dt>Probabilistic candidates</dt><dd>Score = 55% amount + 30% date + 15% reference similarity. Pairs scoring ≥ ${Math.round(80)}% with a clear lead over the runner-up are accepted automatically. Pairs scoring 45–80% go to review as candidates.</dd>
+        <dt>Discrepancy classifier</dt><dd>${classes} active types this run, each with a severity, an explanation and a stable fingerprint.</dd>
+        <dt>Exception queue → review</dt><dd>Re-runs update existing exceptions, auto-clear fixed ones and reopen relapses. Reviewers confirm candidates, resolve, accept or reopen.</dd>
+        <dt>Audit trail</dt><dd>Append-only, SHA-256 hash-chained event log.</dd>
+      </dl></div></div>`;
+  $$(".box").forEach(b => { b.onclick = () => location.hash = b.dataset.href; b.onkeydown = e => { if (e.key === "Enter") b.onclick(); }; });
+}
+
+/* ---------- Data sources ---------- */
+function pageSources() {
+  const s = S.summary, run = s.run, ing = run?.pipeline?.ingestion || {};
+  const bankMode = lsGet("ll_bank") || "csv";
+  $("#page").innerHTML = head("Data sources", "Three independent records of the same money")
+    + `<div class="srcgrid">
+      <div class="srccard"><h3>${SRC_ICON["Internal ledger"]} Internal payment ledger</h3><div class="muted">CSV export · ${ing.ledger ?? "–"} entries in the last run</div><div class="path">${esc(s.sources.ledger)}</div></div>
+      <div class="srccard"><h3>${SRC_ICON["Gateway settlement feed"]} Gateway settlement feed</h3><div class="muted">CSV report · ${ing.gateway ?? "–"} events in the last run</div><div class="path">${esc(s.sources.gateway)}</div></div>
+      <div class="srccard"><h3>${SRC_ICON["Bank settlement"]} Bank settlement</h3><div class="muted">CSV file, or the bank API simulator · ${ing.bank ?? "–"} lines</div>
+        <div class="path">${esc(s.sources.bank)}</div><div class="path" style="margin-top:4px">GET <a href="/sim/bank/v1/transactions?limit=5" target="_blank">${esc(s.sources.bank_api)}/transactions</a></div></div>
+    </div>
+    <div class="card"><h2>Run reconciliation <span class="sub">Uses records dated before the as-of date, like a daily close</span></h2>
+      <div class="runform">
+        <label>As of<input type="date" id="asof" value="${run?.as_of || new Date().toISOString().slice(0, 10)}"></label>
+        <label>Bank source<span class="seg" id="seg"><button data-v="csv" class="${bankMode === "csv" ? "on" : ""}">CSV file</button><button data-v="api" class="${bankMode === "api" ? "on" : ""}">API simulator</button></span></label>
+        <button class="btn primary" id="runbtn" ${s.data_ready ? "" : "disabled"}>Run reconciliation</button>
+        ${s.data_ready ? "" : `<span class="muted">Sample files are missing. Run <code>python -m ledgerlens demo</code> first.</span>`}
+      </div></div>
+    <div class="card"><h2>Run history</h2><div class="tbox"><table><thead><tr><th>Run</th><th>As of</th><th class="hide-sm">Bank source</th><th>Issues</th><th class="hide-sm">Started</th></tr></thead><tbody>
+      ${s.runs.map(r => `<tr><td>#${r.id} <span class="muted">${esc(r.label)}</span></td><td class="num">${dayFmt(r.as_of)}</td>
+        <td class="hide-sm muted">${esc((r.sources.bank || "").split(" · ")[0])}</td><td class="num">${r.stats.discrepancies}</td><td class="hide-sm muted">${when(r.created_at)}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+  $$("#seg button").forEach(b => b.onclick = () => { lsSet("ll_bank", b.dataset.v); $$("#seg button").forEach(x => x.classList.toggle("on", x === b)); });
+  $("#runbtn").onclick = async () => {
+    const btn = $("#runbtn"); btn.disabled = true; btn.textContent = "Running…";
+    try {
+      const r = await post("/api/runs", { as_of: $("#asof").value, bank_source: $("#seg .on").dataset.v });
+      await refresh(); toast(`Run #${r.run_id} complete · ${r.stats.discrepancies} discrepancies`); location.hash = "#/reports";
+    } catch (e) { toast("Run failed: " + e.message); btn.disabled = false; btn.textContent = "Run reconciliation"; }
+  };
+}
+
+/* ---------- Audit trail ---------- */
+async function pageAudit() {
+  const a = await api("/api/audit");
+  $("#page").innerHTML = head("Audit trail", "Every detection and every human decision, append-only and hash-chained")
+    + `<div class="banner ${a.ok ? "ok" : "bad"}">${a.ok ? "✓" : "✗"} Hash chain ${esc(a.message)}. ${a.events} events verified, each SHA-256 linked to the one before it.</div>
+    <div class="card"><div class="tbox"><table><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Exception</th><th class="hide-sm">Note</th><th class="hide-sm">Hash</th></tr></thead><tbody>
+    ${a.log.map(ev => `<tr class="click" data-fp="${esc(ev.fingerprint)}"><td class="num muted">${when(ev.ts)}</td><td><b>${esc(ev.actor)}</b></td>
+      <td>${esc(ev.action.replace("_", " "))}${ev.from_status !== ev.to_status ? `<div class="kind" style="font-family:inherit">${esc(ev.from_status || "∅")} → ${esc(ev.to_status)}</div>` : ""}</td>
+      <td>${esc(ev.summary || ev.fingerprint)}<div class="kind">${esc(ev.kind || "")}</div></td>
+      <td class="hide-sm muted" style="max-width:280px">${esc(ev.note)}</td><td class="hide-sm mono muted">${esc(ev.hash.slice(0, 12))}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+  bindRows();
+}
+
+/* ---------- router ---------- */
+async function route() {
+  const [page, a, b] = location.hash.slice(2).split("/");
+  renderNav();
+  $$(".pop").forEach(p => p.remove());
+  try {
+    if (!S.summary.run && !["sources"].includes(page)) {
+      $("#page").innerHTML = head("Reconciliation", "No runs yet") + `<div class="empty">Run <code>python -m ledgerlens demo</code>, or start a run from <a href="#/sources">Data sources</a>.</div>`;
+      return;
+    }
+    if (page === "reports" && a) return await pageReport(a, b);
+    ({ queue: pageQueue, trace: pageTrace, payouts: pagePayouts, pipeline: pagePipeline, sources: pageSources, audit: pageAudit }[page] || pageReports)();
+  } catch (e) { $("#page").innerHTML = `<div class="empty">Could not load: ${esc(e.message)}</div>`; }
+}
+window.addEventListener("hashchange", () => { S.q = ""; S.tab = "disc"; route(); window.scrollTo(0, 0); });
+$("#collapse").onclick = () => { $("#app").classList.toggle("collapsed"); lsSet("ll_collapsed", $("#app").classList.contains("collapsed") ? "1" : ""); };
+if (lsGet("ll_collapsed")) $("#app").classList.add("collapsed");
+refresh().then(route).catch(e => { $("#page").innerHTML = `<div class="empty">Could not reach the server: ${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
