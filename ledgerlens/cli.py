@@ -129,7 +129,8 @@ def cmd_serve(a) -> int:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="ledgerlens", description="Intelligent payment reconciliation")
-    p.add_argument("--db", default="ledgerlens.db", help="SQLite file (default: ledgerlens.db)")
+    p.add_argument("--db", default=os.environ.get("LEDGERLENS_DB", "ledgerlens.db"),
+                   help="SQLite file (default: ledgerlens.db, or $LEDGERLENS_DB)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     r = sub.add_parser("run", help="reconcile three source files")
@@ -182,8 +183,9 @@ def main(argv=None) -> int:
     sv.set_defaults(fn=cmd_serve)
 
     u = sub.add_parser("up", help="demo data (first time) + dashboard, in one command")
-    u.add_argument("--host", default="127.0.0.1")
-    u.add_argument("--port", type=int, default=8765)
+    # hosting platforms (Render, Railway, Fly, Heroku) pass the port in $PORT and need 0.0.0.0
+    u.add_argument("--host", default=os.environ.get("HOST", "0.0.0.0" if "PORT" in os.environ else "127.0.0.1"))
+    u.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8765)))
     u.add_argument("--data", default="samples")
     u.add_argument("--no-browser", action="store_true")
     u.set_defaults(fn=cmd_up)

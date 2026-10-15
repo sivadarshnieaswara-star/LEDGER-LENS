@@ -1,0 +1,7 @@
+__pycache__
+*.pyc
+*.db
+.git
+.claude
+tests
+samples/uploads

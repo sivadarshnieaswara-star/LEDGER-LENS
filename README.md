@@ -14,6 +14,24 @@ python3 -m ledgerlens up        # builds demo data on first run, opens the intro
 
 It needs Python 3.10+ and nothing else: no `pip install`, no database server.
 
+## Deploy
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/sivadarshnieaswara-star/LEDGER-LENS)
+
+- **Render (free):** click the button above, or in the Render dashboard choose *New → Blueprint* and pick
+  this repository. `render.yaml` sets everything up: there is no build step, and the start command is
+  `python -m ledgerlens up --no-browser`.
+- **Railway / Heroku-style hosts:** the `Procfile` runs the same command.
+- **Fly.io, Cloud Run, a VPS:** use the `Dockerfile` (`docker build -t ledgerlens . && docker run -p 8765:8765 ledgerlens`).
+
+The app reads `$PORT` and binds to `0.0.0.0` when a host provides one. On first boot it generates the
+demo data and three daily close-outs. Free hosts usually have ephemeral disks, so the demo resets on
+each redeploy or restart, which is fine for a public demo. Set `LEDGERLENS_DB` to a path on a
+persistent disk to keep history.
+
+> The public demo has no login: anyone with the link can resolve exceptions or upload files. Don't
+> upload real payment data to a public deployment.
+
 ## Features
 
 | Capability | How LedgerLens does it |

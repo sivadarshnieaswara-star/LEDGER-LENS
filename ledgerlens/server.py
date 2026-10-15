@@ -115,6 +115,11 @@ def make_handler(db_path: str, data_dir: str, port: int):
             finally:
                 store.close()
 
+        def do_HEAD(self):   # health checks from hosting platforms
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+
         def do_POST(self):
             parts = [unquote(p) for p in urlparse(self.path).path.strip("/").split("/") if p]
             try:

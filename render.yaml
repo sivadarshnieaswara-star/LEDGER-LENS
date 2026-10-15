@@ -1,0 +1,12 @@
+# One-click deploy on Render: Dashboard → New → Blueprint → pick this repo.
+services:
+  - type: web
+    name: ledgerlens
+    runtime: python
+    plan: free
+    buildCommand: "python --version"          # nothing to install: standard library only
+    startCommand: "python -m ledgerlens up --no-browser"
+    healthCheckPath: /api/summary
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
