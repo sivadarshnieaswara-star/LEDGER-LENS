@@ -292,16 +292,6 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 }
 
 /* ================= Try it: smooth-scroll case scenes ================= */
-.cs-nav { position: fixed; top: 76px; left: 50%; translate: -50% -12px; z-index: 40; display: flex; gap: 4px; padding: 4px; border-radius: 999px;
-  background: color-mix(in srgb, var(--panel) 72%, transparent); border: 1px solid var(--line); backdrop-filter: blur(10px);
-  opacity: 0; pointer-events: none; transition: opacity .3s, translate .3s; }
-.cs-nav.show { opacity: 1; translate: -50% 0; pointer-events: auto; }
-.cs-nav button { border: 0; background: none; font-family: var(--mono); font-size: 14px; padding: 8px 13px; border-radius: 999px; cursor: pointer; color: var(--muted); }
-.cs-nav button.on { background: var(--ink); color: var(--panel); }
-.cs-progress { position: fixed; left: 0; right: 0; top: 0; height: 3px; background: var(--accent); transform-origin: 0 50%; transform: scaleX(0); z-index: 60; opacity: 0; transition: opacity .3s; }
-.cs-readout { position: fixed; right: 22px; bottom: 18px; z-index: 40; font-family: var(--mono); font-size: 13px; color: var(--muted); opacity: 0; transition: opacity .3s; }
-.cs-progress.show, .cs-readout.show { opacity: 1; }
-.cs-scene { position: relative; min-height: 100vh; display: grid; place-items: center; overflow: hidden; }
 .cs-card { width: 300px; height: 400px; border-radius: 6px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
   padding: 22px; display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 1; will-change: transform; }
 .cs-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; border-radius: 6px 6px 0 0; background: var(--ok); }
@@ -323,29 +313,37 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 .cs-bars b { font-family: var(--mono); font-size: 12px; text-align: right; }
 .cs-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: baseline; border-top: 1px dashed var(--line); padding-top: 12px; }
 .cs-foot span { color: var(--muted); font-size: 12.5px; } .cs-foot b { font-family: var(--mono); font-size: 22px; letter-spacing: -1px; }
-.cs-num { position: absolute; top: calc(50% - 34px); left: calc(50% + 120px); margin: 0; z-index: 2; pointer-events: none;
-  font-family: var(--mono); font-size: clamp(44px, 6vw, 68px); font-weight: 700; letter-spacing: -3px; line-height: 1.1; color: var(--accent); will-change: transform; }
-.cs-copy { position: absolute; left: max(24px, calc(50% - 560px)); top: 50%; translate: 0 -50%; max-width: 300px; z-index: 1; }
-.cs-copy h3 { font-size: 26px; letter-spacing: -.02em; margin: 0 0 10px; }
-.cs-copy p { color: var(--ink-2); line-height: 1.55; margin: 0 0 18px; font-size: 15px; }
+/* offset-linked carousel */
+.oc { position: relative; outline: none; padding: 20px 0 10px; overflow: hidden; touch-action: pan-y; user-select: none; cursor: grab; }
+.oc.grabbing { cursor: grabbing; }
+.oc:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 12px; }
+.oc-track { position: relative; height: 470px; }
+.oc-slide { position: absolute; left: 50%; top: 20px; width: min(860px, 88vw); height: 430px; margin-left: calc(min(860px, 88vw) / -2);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; align-items: center; padding: 26px 40px;
+  border-radius: 22px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); will-change: transform, filter, opacity; }
+.oc-slide .cs-copy { min-width: 0; }
+.oc-num { display: block; font-family: var(--mono); font-weight: 700; font-size: 44px; letter-spacing: -2px; color: var(--accent); line-height: 1; margin-bottom: 12px; }
+.oc-slide .cs-copy h3 { font-size: 26px; letter-spacing: -.02em; margin: 0 0 10px; }
+.oc-slide .cs-copy p { color: var(--ink-2); line-height: 1.55; margin: 0 0 18px; font-size: 15px; }
+.oc-slide .cs-card { box-shadow: none; }
+.oc-ctrl { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 6px; }
+.oc-arrow { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); cursor: pointer; font-size: 18px; }
+.oc-pager { display: flex; gap: 4px; padding: 4px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
+.oc-pager button { border: 0; background: none; font-family: var(--mono); font-size: 13px; padding: 7px 12px; border-radius: 999px; cursor: pointer; color: var(--muted); }
+.oc-pager button.on { background: var(--ink); color: var(--panel); }
 @media (max-width: 980px) {
-  /* stay side by side: copy on the left, a scaled card on the right */
-  .cs-scene { min-height: 86vh; padding: 70px 18px 50px; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; place-items: center stretch; }
-  .cs-copy { position: static; translate: none; max-width: none; text-align: left; grid-column: 1; grid-row: 1; min-width: 0; }
-  .cs-card { zoom: .78; grid-column: 2; grid-row: 1; }
-  .cs-num { top: 60px; left: auto; right: 18px; font-size: 42px; }
-  .cs-nav { top: 80px; } .cs-nav button { padding: 6px 9px; font-size: 12px; }
+  .oc-slide { padding: 22px 24px; gap: 20px; } .oc-slide .cs-card { zoom: .78; }
 }
 @media (max-width: 600px) {
-  .cs-scene { min-height: 70vh; padding: 64px 12px 40px; gap: 12px; }
-  .cs-card { zoom: .54; }
-  .cs-copy h3 { font-size: 18px; margin-bottom: 6px; }
-  .cs-copy p { font-size: 12.5px; line-height: 1.45; margin-bottom: 12px; }
-  .cs-copy .btn { padding: 7px 11px; font-size: 12.5px; }
-  .cs-num { font-size: 32px; top: 52px; right: 12px; }
+  .oc-track { height: 360px; }
+  .oc-slide { height: 330px; padding: 18px 14px; gap: 10px; border-radius: 18px; }
+  .oc-slide .cs-card { zoom: .54; }
+  .oc-num { font-size: 30px; margin-bottom: 8px; }
+  .oc-slide .cs-copy h3 { font-size: 17px; margin-bottom: 6px; }
+  .oc-slide .cs-copy p { font-size: 12.5px; line-height: 1.45; margin-bottom: 12px; }
+  .oc-slide .cs-copy .btn { padding: 7px 10px; font-size: 12px; }
+  .oc-pager button { padding: 6px 8px; font-size: 12px; }
 }
-}
-@media (prefers-reduced-motion: reduce) { .cs-num, .cs-card { transform: none !important; } }
 /* ================= Magic bento (How it works) ================= */
 .bento { --glow: 240, 101, 47; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(220px, auto); gap: 12px; position: relative; }
 .bento-card { position: relative; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); padding: 20px 22px;
@@ -1233,38 +1231,67 @@ function mountSmoothScroll() {
 let smooth = null;
 
 function mountCaseScenes() {
-  const scenes = $$(".cs-scene"); if (!scenes.length) return () => {};
-  const nav = $("#cs-nav"), bar = $("#cs-progress"), out = $("#cs-readout"), btns = $$("#cs-nav button");
+  const root = $("#oc"); if (!root) return () => {};
+  const slides = $$(".oc-slide", root), pager = $$(".oc-pager button", root), n = slides.length;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let raf = 0, dead = false, lastActive = -1;
-  btns.forEach(b => b.onclick = () => {
-    const el = scenes[+b.dataset.to], y = el.getBoundingClientRect().top + scrollY - (innerHeight - el.offsetHeight) / 2;
-    smooth ? smooth.scrollTo(y) : scrollTo({ top: y, behavior: "smooth" });
-  });
-  const loop = () => {
+  let pos = 0, target = 0, dragging = false, downX = 0, downPos = 0, moved = 0, vx = 0, lastX = 0, lastT = 0, raf = 0, dead = false, last = 0, shown = -1;
+  const width = () => slides[0].offsetWidth;
+  const clamp = v => Math.max(0, Math.min(n - 1, v));
+  const go = i => { target = clamp(Math.round(i)); };
+  function loop(now) {
     if (dead) return;
-    const vh = innerHeight, first = scenes[0].getBoundingClientRect(), lastR = scenes[scenes.length - 1].getBoundingClientRect();
-    const start = first.top + scrollY - vh, end = lastR.bottom + scrollY;
-    const prog = Math.max(0, Math.min(1, (scrollY - start) / (end - start)));
-    const inView = first.top < vh * 0.6 && lastR.bottom > vh * 0.4;
-    nav.classList.toggle("show", inView); bar.classList.toggle("show", inView); out.classList.toggle("show", inView);
-    bar.style.transform = `scaleX(${prog})`; out.textContent = Math.round(prog * 100) + "%";
-    const narrow = innerWidth <= 980;
-    let active = 0, best = Infinity;
-    scenes.forEach((sc, i) => {
-      const r = sc.getBoundingClientRect();
-      // 0 when the scene enters from below, 1 when it leaves at the top
-      const p = Math.max(0, Math.min(1, (vh - r.top) / (vh + r.height)));
-      if (!reduce) {
-        const range = narrow ? 80 : 300;
-        sc.querySelector(".cs-num").style.transform = `translateY(${(-range + 2 * range * p).toFixed(1)}px)`;
-        sc.querySelector(".cs-card").style.transform = `translateY(${((0.5 - p) * (narrow ? 20 : 60)).toFixed(1)}px) rotate(${((p - 0.5) * (narrow ? 2 : 4)).toFixed(2)}deg)`;
-      }
-      const d = Math.abs(r.top + r.height / 2 - vh / 2); if (d < best) { best = d; active = i; }
+    const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now;
+    if (!dragging) pos += (target - pos) * (reduce ? 1 : 1 - Math.exp(-dt * 9));
+    const w = width(), gap = Math.max(24, w * 0.06);
+    slides.forEach((el, i) => {
+      const o = i - pos, a = Math.abs(o), c = Math.min(a, 1.6);
+      // every property is a function of this slide's offset from the centre
+      el.style.transform = `translateX(${(o * (w + gap)).toFixed(1)}px) translateY(${(c * 70).toFixed(1)}px) rotate(${(Math.max(-1.6, Math.min(1.6, o)) * 7).toFixed(2)}deg) scale(${(1 - c * 0.14).toFixed(3)})`;
+      el.style.filter = reduce ? "" : `blur(${(Math.min(a, 1) * 3).toFixed(2)}px) grayscale(${Math.min(a, 1).toFixed(2)})`;
+      el.style.opacity = Math.max(0, 1 - Math.max(0, a - 0.4) * 0.5).toFixed(3);
+      el.style.zIndex = String(100 - Math.round(a * 10));
+      el.style.visibility = a > 2.6 ? "hidden" : "visible";
+      el.inert = a > 0.5;
     });
-    if (active !== lastActive) { lastActive = active; btns.forEach((b, i) => b.classList.toggle("on", i === active)); }
+    const cur = Math.round(pos);
+    if (cur !== shown) { shown = cur; pager.forEach((b, i) => b.classList.toggle("on", i === cur)); }
     raf = requestAnimationFrame(loop);
+  }
+  root.addEventListener("pointerdown", e => {
+    if (e.target.closest("button, a")) return;
+    dragging = true; moved = 0; downX = lastX = e.clientX; downPos = pos; lastT = performance.now(); vx = 0;
+    root.setPointerCapture(e.pointerId); root.classList.add("grabbing");
+  });
+  root.addEventListener("pointermove", e => {
+    if (!dragging) return;
+    const dx = e.clientX - downX; moved = Math.max(moved, Math.abs(dx));
+    let p = downPos - dx / width();
+    if (p < 0) p *= 0.35; if (p > n - 1) p = n - 1 + (p - n + 1) * 0.35;   // rubber band at the ends
+    pos = p;
+    const t = performance.now(); vx = vx * 0.6 + ((e.clientX - lastX) / Math.max(1, t - lastT)) * 0.4; lastX = e.clientX; lastT = t;
+  });
+  const up = e => {
+    if (!dragging) return; dragging = false; root.classList.remove("grabbing");
+    if (moved < 6) {   // click: bring the slide under the pointer to the centre
+      const sl = e.target.closest?.(".oc-slide") || document.elementFromPoint(e.clientX, e.clientY)?.closest(".oc-slide");
+      if (sl) go(+sl.dataset.i); return;
+    }
+    go(pos - vx * 0.35);   // flick carries a little further
   };
+  root.addEventListener("pointerup", up); root.addEventListener("pointercancel", up);
+  root.addEventListener("click", e => { if (moved >= 6) { e.preventDefault(); e.stopPropagation(); } }, true);
+  root.addEventListener("keydown", e => {
+    if (e.key === "ArrowRight") { e.preventDefault(); go(target + 1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); go(target - 1); }
+  });
+  let wheelAcc = 0, wheelT = 0;
+  root.addEventListener("wheel", e => {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;   // vertical wheel keeps scrolling the page
+    e.preventDefault(); wheelAcc += e.deltaX; clearTimeout(wheelT);
+    wheelT = setTimeout(() => { if (Math.abs(wheelAcc) > 30) go(target + Math.sign(wheelAcc)); wheelAcc = 0; }, 60);
+  }, { passive: false });
+  $$(".oc-arrow", root).forEach(b => b.onclick = () => go(target + +b.dataset.dir));
+  pager.forEach(b => b.onclick = () => go(+b.dataset.to));
   raf = requestAnimationFrame(loop);
   return () => { dead = true; cancelAnimationFrame(raf); };
 }
@@ -1817,21 +1844,27 @@ function pageLanding() {
   <section class="l-sec" id="l-try" style="padding-top:20px"><div class="l-wrap">
     <span class="eyebrow">Try it</span>
     <h2>Six cases worth clicking.</h2>
-    <p class="sub">Each one is planted in the demo data to show a different part of the engine. Scroll through them, or jump with the pill above.</p>
+    <p class="sub">Each one is planted in the demo data to show a different part of the engine. Drag or swipe through them, use the arrow keys, or jump with the numbers.</p>
   </div>
-  <nav class="cs-nav" id="cs-nav" aria-label="Jump to case">${LANDING_SCEN.map((c, i) => `<button data-to="${i}" aria-label="Case ${i + 1}: ${esc(c.title)}">${String(i + 1).padStart(2, "0")}</button>`).join("")}</nav>
-  <div class="cs-progress" id="cs-progress"></div><output class="cs-readout" id="cs-readout">0%</output>
-  ${LANDING_SCEN.map((c, i) => `<section class="cs-scene" id="cs-${i}" data-i="${i}">
-    <div class="cs-card ${c.sev}">
-      <div class="cs-top"><span>${String(i + 1).padStart(3, "0")}</span><span class="cs-tag">${esc(c.tag)}</span></div>
-      <div class="cs-id">${esc(c.id)}</div>
-      ${c.rows ? `<div class="cs-rows">${c.rows.map(([a, b, v]) => `<div><span><b>${esc(a)}</b><small>${esc(b)}</small></span><em>${esc(v)}</em></div>`).join("")}</div>` : ""}
-      ${c.bars ? `<div class="cs-bars">${c.bars.map(([n, v, w]) => `<div><span>${n}</span><i><s style="width:${w * 100}%"></s><u style="width:${v * 100}%"></u></i><b>+${Math.round(v * 100)}</b></div>`).join("")}</div>` : ""}
-      <div class="cs-foot"><span>${esc(c.foot[0])}</span><b>${esc(c.foot[1])}</b></div>
+  <div class="oc" id="oc" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Demo cases">
+    <div class="oc-track">
+    ${LANDING_SCEN.map((c, i) => `<div class="oc-slide" data-i="${i}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${LANDING_SCEN.length}: ${esc(c.title)}">
+      <div class="cs-copy"><span class="oc-num">#${String(i + 1).padStart(3, "0")}</span><h3>${esc(c.title)}</h3><p>${esc(c.d)}</p><a class="btn primary" href="${c.href}">Open in dashboard →</a></div>
+      <div class="cs-card ${c.sev}">
+        <div class="cs-top"><span>${String(i + 1).padStart(3, "0")}</span><span class="cs-tag">${esc(c.tag)}</span></div>
+        <div class="cs-id">${esc(c.id)}</div>
+        ${c.rows ? `<div class="cs-rows">${c.rows.map(([a, b, v]) => `<div><span><b>${esc(a)}</b><small>${esc(b)}</small></span><em>${esc(v)}</em></div>`).join("")}</div>` : ""}
+        ${c.bars ? `<div class="cs-bars">${c.bars.map(([n, v, w]) => `<div><span>${n}</span><i><s style="width:${w * 100}%"></s><u style="width:${v * 100}%"></u></i><b>+${Math.round(v * 100)}</b></div>`).join("")}</div>` : ""}
+        <div class="cs-foot"><span>${esc(c.foot[0])}</span><b>${esc(c.foot[1])}</b></div>
+      </div>
+    </div>`).join("")}
     </div>
-    <h2 class="cs-num" aria-hidden="true">#${String(i + 1).padStart(3, "0")}</h2>
-    <div class="cs-copy"><h3>${esc(c.title)}</h3><p>${esc(c.d)}</p><a class="btn primary" href="${c.href}">Open in dashboard →</a></div>
-  </section>`).join("")}
+    <div class="oc-ctrl">
+      <button class="oc-arrow" data-dir="-1" aria-label="Previous case">‹</button>
+      <div class="oc-pager">${LANDING_SCEN.map((c, i) => `<button data-to="${i}" aria-label="Case ${i + 1}">${String(i + 1).padStart(2, "0")}</button>`).join("")}</div>
+      <button class="oc-arrow" data-dir="1" aria-label="Next case">›</button>
+    </div>
+  </div>
   <div class="l-wrap">
     <div class="stack3" style="margin-top:28px">
       <div class="term"><span class="c"># one command, no dependencies (Python 3.10+)</span><br><span class="p">$</span> python3 -m ledgerlens up<br><span class="c"># reconcile your own files</span><br><span class="p">$</span> python3 -m ledgerlens run --ledger l.csv \\<br>&nbsp;&nbsp;--gateway a.csv --gateway b.csv --bank x.csv<br><span class="p">$</span> python3 -m ledgerlens verify</div>
