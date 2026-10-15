@@ -265,31 +265,30 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 @media (max-width: 960px) { .flexc { height: 360px; } }
 
 
-/* ================= Hero light field ================= */
-.l-hero2 { padding: 72px 0 24px; text-align: center; overflow: hidden; }
-.l-hero2-copy h1 { font-size: clamp(36px, 5.6vw, 66px); line-height: 1.03; letter-spacing: -.035em; margin: 18px auto; font-weight: 700; max-width: 900px; }
-.l-hero2-copy h1 em { font-style: normal; color: var(--accent); }
-.l-hero2-copy .lead { font-size: 18px; line-height: 1.55; color: var(--ink-2); margin: 0 auto 28px; max-width: 640px; }
-.l-hero2-copy .cta { justify-content: center; }
-.lf { position: relative; max-width: 1200px; margin: 30px auto 0; }
-.lf-canvas { display: block; width: 100%; height: 260px; }
-.lf-stages { display: grid; grid-template-columns: repeat(3, 1fr); position: relative; margin-top: -130px; padding: 0 2%; }
-.lf-stage { position: relative; padding-top: 140px; text-align: center; }
-.lf-stem { position: absolute; top: 0; left: 50%; width: 1.5px; height: 128px; translate: -.75px 0; background: color-mix(in srgb, var(--ink) 22%, transparent); transition: background .4s; }
-.lf-stem::before { content: ""; position: absolute; top: -4px; left: 50%; width: 9px; height: 9px; border-radius: 50%; translate: -50% 0; background: color-mix(in srgb, var(--ink) 45%, transparent); transition: background .4s, box-shadow .4s; }
-.lf-label { color: var(--muted); font-size: 15px; margin-bottom: 6px; }
-.lf-value { font-size: clamp(34px, 4.6vw, 58px); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; transition: color .4s; }
-.lf-value small { font-size: .42em; font-weight: 600; margin-left: 6px; letter-spacing: 0; color: var(--muted); }
-.lf-stage p { color: var(--muted); font-size: 15px; line-height: 1.5; max-width: 260px; margin: 12px auto 0; }
-.lf-stage.on .lf-stem { background: var(--accent); }
-.lf-stage.on .lf-stem::before { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
-.lf-stage.on .lf-value { color: var(--accent); }
+/* ================= Hero: follow the sun ================= */
+.sun-wrap { padding: 16px 16px 0; }
+.sun { position: relative; overflow: hidden; border-radius: 28px; max-width: 1280px; margin: 0 auto; min-height: 780px;
+  background: #07070a; color: #f2f2f0; padding: 72px clamp(22px, 5vw, 64px) 330px; isolation: isolate; border: 1px solid #1d1d22; }
+.sun-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+.sun-copy { max-width: 720px; }
+.sun-copy h1 { font-size: clamp(36px, 5.4vw, 68px); line-height: 1.02; letter-spacing: -.035em; margin: 18px 0; font-weight: 700; }
+.sun-copy h1 em { font-style: normal; color: #ff8a4c; }
+.sun-copy .lead { color: #b9b9be; font-size: 18px; line-height: 1.55; margin: 0 0 28px; }
+.sun .eyebrow { background: rgba(255,138,76,.12); color: #ff9a62; }
+.sun .sun-ghost { background: rgba(255,255,255,.06); color: #f2f2f0; border-color: rgba(255,255,255,.14); }
+.sun-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 76px; text-align: center; }
+.sun-col { cursor: pointer; outline: none; border-radius: 14px; padding: 6px 4px; }
+.sun-col:focus-visible { box-shadow: 0 0 0 2px #ff8a4c; }
+.sun-meta { font-size: 15px; color: #7c7c84; margin-bottom: 10px; font-variant-numeric: tabular-nums; transition: color .6s; }
+.sun-name { font-size: clamp(30px, 5.2vw, 64px); font-weight: 700; letter-spacing: -.035em; line-height: 1; color: #55555c; transition: color .6s; }
+.sun-col p { color: #66666d; font-size: 15px; line-height: 1.55; max-width: 270px; margin: 14px auto 0; transition: color .6s; }
+.sun-col.on .sun-meta { color: #ff9a62; } .sun-col.on .sun-name { color: #fff; } .sun-col.on p { color: #e4e4e6; }
 @media (max-width: 760px) {
-  .l-hero2 { padding-top: 40px; }
-  .lf-canvas { height: 180px; }
-  .lf-stages { margin-top: -90px; }
-  .lf-stage { padding-top: 100px; } .lf-stem { height: 88px; }
-  .lf-stage p { font-size: 12.5px; padding: 0 4px; } .lf-label { font-size: 13px; }
+  .sun-wrap { padding: 8px 8px 0; }
+  .sun { min-height: 0; padding: 44px 18px 210px; border-radius: 20px; }
+  .sun-cols { gap: 8px; margin-top: 44px; }
+  .sun-meta { font-size: 12px; } .sun-col p { font-size: 12px; }
+  .sun-name { font-size: 25px; letter-spacing: -.03em; }
 }
 /* ================= Magic bento (How it works) ================= */
 .bento { --glow: 240, 101, 47; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(220px, auto); gap: 12px; position: relative; }
@@ -1056,64 +1055,76 @@ async function pageAudit() {
 
 
 
-/* ================= Hero light field ================= */
-function mountLightField() {
-  const root = $("#lf"); if (!root) return () => {};
-  const cv = $(".lf-canvas", root), ctx = cv.getContext("2d"), stages = $$(".lf-stage", root);
+/* ================= Hero: follow the sun ================= */
+function mountSunrise() {
+  const root = $("#sun"); if (!root) return () => {};
+  const cv = $(".sun-canvas", root), ctx = cv.getContext("2d"), cols = $$(".sun-col", root);
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const STOPS = [1 / 6, 3 / 6, 5 / 6];          // stage x positions (centre of each grid column)
-  const LINES = 44, PERIOD = 5200;              // ms for one sweep incl. pause
-  let W = 0, H = 0, raf = 0, dead = false, t0 = performance.now(), active = -1;
-  const rgb = name => { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); const m = v.match(/^#([0-9a-f]{6})$/i); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : [230, 230, 230]; };
-  let ink = rgb("--ink"), acc = rgb("--accent");
-  const mo = new MutationObserver(() => { ink = rgb("--ink"); acc = rgb("--accent"); });
-  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  const size = () => { const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2); W = r.width; H = r.height; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); };
-  const ro = new ResizeObserver(size); ro.observe(cv); size();
-  // a line's y at x: tight waist in the middle, fanning out toward both edges
-  const yAt = (x, k) => { const t = Math.abs(x - W / 2) / (W / 2); const spread = 0.025 + 0.975 * Math.pow(t, 1.75); return H / 2 + k * (H * 0.46) * spread; };
+  let W = 0, H = 0, raf = 0, dead = false, active = 1, hoverIdx = null, sunX = null, lastSwitch = performance.now();
+  const STEP = 3400;
+  const stars = Array.from({ length: 170 }, () => ({ x: Math.random(), y: Math.random() * 0.78, r: Math.random() * 1.1 + 0.2, p: Math.random() * 6.28, s: 0.6 + Math.random() * 1.6 }));
+  const size = () => { const r = root.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2); W = r.width; H = r.height; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); };
+  const ro = new ResizeObserver(size); ro.observe(root); size();
+  const setActive = i => { active = i; cols.forEach((c, k) => c.classList.toggle("on", k === i)); };
+  setActive(active);
+  const colX = i => { const a = root.getBoundingClientRect(), r = cols[i].getBoundingClientRect(); return r.left - a.left + r.width / 2; };
+  cols.forEach((c, i) => {
+    c.addEventListener("mouseenter", () => { hoverIdx = i; setActive(i); });
+    c.addEventListener("mouseleave", () => { hoverIdx = null; lastSwitch = performance.now(); });
+    c.addEventListener("focus", () => { hoverIdx = i; setActive(i); });
+    c.addEventListener("blur", () => { hoverIdx = null; });
+    c.addEventListener("click", () => { setActive(i); lastSwitch = performance.now(); });
+  });
+  let last = 0;
   function draw(now) {
     if (dead) return;
-    const ph = reduce ? 0.5 : ((now - t0) % PERIOD) / PERIOD;
-    const px = (ph * 1.18 - 0.09) * W;          // pulse travels slightly past both edges
+    const dt = Math.min(0.25, (now - (last || now)) / 1000); last = now;
+    if (!reduce && hoverIdx == null && now - lastSwitch > STEP) { setActive((active + 1) % cols.length); lastSwitch = now; }
+    const target = colX(active);
+    sunX = sunX == null ? target : sunX + (target - sunX) * (1 - Math.exp(-dt * 2.4));
     ctx.clearRect(0, 0, W, H);
-    // waist glow
-    const rr = H * 0.46, sx = (W * 0.24) / rr;   // elliptical glow that fades out inside the canvas
-    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(sx, 1);
-    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rr);
-    g.addColorStop(0, `rgba(${ink},.16)`); g.addColorStop(1, `rgba(${ink},0)`);
-    ctx.fillStyle = g; ctx.fillRect(-rr, -rr, rr * 2, rr * 2); ctx.restore();
-    const step = 6;
-    for (let i = 0; i < LINES; i++) {
-      const k = (i / (LINES - 1)) * 2 - 1;
-      // base line, brighter toward the waist
-      const lg = ctx.createLinearGradient(0, 0, W, 0);
-      lg.addColorStop(0, `rgba(${ink},.55)`); lg.addColorStop(.32, `rgba(${ink},.22)`); lg.addColorStop(.5, `rgba(${ink},.9)`);
-      lg.addColorStop(.68, `rgba(${ink},.22)`); lg.addColorStop(1, `rgba(${ink},.55)`);
-      ctx.strokeStyle = lg; ctx.lineWidth = 0.9; ctx.beginPath();
-      for (let x = 0; x <= W; x += step) { const y = yAt(x, k); x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-      ctx.stroke();
-      // pulse: the same line, re-stroked in accent inside a soft band around px
-      const band = Math.max(26, W * 0.035);
-      const pg = ctx.createLinearGradient(px - band, 0, px + band, 0);
-      pg.addColorStop(0, `rgba(${acc},0)`); pg.addColorStop(.5, `rgba(${acc},1)`); pg.addColorStop(1, `rgba(${acc},0)`);
-      ctx.strokeStyle = pg; ctx.lineWidth = 1.6; ctx.beginPath();
-      const x0 = Math.max(0, px - band), x1 = Math.min(W, px + band);
-      for (let x = x0; x <= x1; x += 3) { const y = yAt(x, k); x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
-      ctx.stroke();
+    // planet geometry: a huge circle whose top edge forms the horizon
+    const R = Math.max(W * 1.9, 1600), horizon = H - Math.min(170, H * 0.24), cx = W / 2, cy = horizon + R;
+    const rimY = x => cy - Math.sqrt(Math.max(R * R - (x - cx) * (x - cx), 0));
+    const sy = rimY(sunX);
+    // stars (dimmer near the dawn)
+    for (const st of stars) {
+      const x = st.x * W, y = st.y * horizon, near = Math.max(0, 1 - Math.hypot(x - sunX, y - sy) / (W * 0.45));
+      const tw = reduce ? 0.7 : 0.55 + 0.45 * Math.sin(now / 1000 * st.s + st.p);
+      ctx.fillStyle = `rgba(255,255,255,${(0.55 * tw * (1 - near)).toFixed(3)})`;
+      ctx.beginPath(); ctx.arc(x, y, st.r, 0, 6.283); ctx.fill();
     }
-    // pulse halo
-    const ph2 = ctx.createRadialGradient(px, H / 2, 0, px, H / 2, H * 0.45);
-    ph2.addColorStop(0, `rgba(${acc},.22)`); ph2.addColorStop(1, `rgba(${acc},0)`);
-    ctx.fillStyle = ph2; ctx.fillRect(px - H, 0, H * 2, H);
-    // stage dots sit on the waist line; the stage the pulse last reached lights up
-    let a = -1; STOPS.forEach((s, i) => { if (px >= s * W - 4) a = i; });
-    if (a === -1) a = active === -1 ? 0 : active;
-    if (a !== active) { active = a; stages.forEach((el, i) => el.classList.toggle("on", i === a)); }
+    // sky: wide violet/indigo wash plus warm bloom above the sun
+    const wash = (x, y, rx, ry, stops) => { ctx.save(); ctx.translate(x, y); ctx.scale(rx / ry, 1); const g = ctx.createRadialGradient(0, 0, 0, 0, 0, ry); stops.forEach(([o, c]) => g.addColorStop(o, c)); ctx.fillStyle = g; ctx.fillRect(-ry, -ry, ry * 2, ry * 2); ctx.restore(); };
+    wash(sunX, sy, W * 0.75, H * 0.5, [[0, "rgba(120,70,190,.32)"], [.5, "rgba(60,50,150,.14)"], [1, "rgba(20,20,60,0)"]]);
+    wash(W - sunX * 0.5, rimY(W * 0.85), W * 0.45, H * 0.32, [[0, "rgba(40,80,190,.18)"], [1, "rgba(20,40,120,0)"]]);
+    wash(sunX, sy, W * 0.32, H * 0.2, [[0, "rgba(255,180,130,.55)"], [.35, "rgba(255,120,80,.2)"], [1, "rgba(255,100,60,0)"]]);
+    // planet body
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    const body = ctx.createLinearGradient(0, horizon - 40, 0, H);
+    body.addColorStop(0, "#0d0b10"); body.addColorStop(1, "#050507"); ctx.fillStyle = body; ctx.fill();
+    // faint daylight on the surface under the sun
+    ctx.save(); ctx.clip();
+    wash(sunX, sy + 10, W * 0.35, H * 0.16, [[0, "rgba(255,170,120,.22)"], [1, "rgba(255,170,120,0)"]]);
+    ctx.restore();
+    // atmosphere rim: brightest at the sun, fading along the curve
+    const rim = ctx.createLinearGradient(0, 0, W, 0);
+    const f = Math.min(Math.max(sunX / W, 0.001), 0.999);
+    rim.addColorStop(0, "rgba(120,110,220,.35)"); rim.addColorStop(Math.max(0, f - 0.22), "rgba(200,140,200,.45)");
+    rim.addColorStop(f, "rgba(255,240,225,1)"); rim.addColorStop(Math.min(1, f + 0.22), "rgba(170,150,230,.5)"); rim.addColorStop(1, "rgba(90,120,230,.4)");
+    for (const [lw, a] of [[10, .08], [5, .18], [2.2, .55], [1.1, 1]]) {
+      ctx.beginPath(); ctx.arc(cx, cy, R, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.strokeStyle = rim; ctx.globalAlpha = a; ctx.lineWidth = lw; ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // the sun itself, just cresting
+    const sun = ctx.createRadialGradient(sunX, sy, 0, sunX, sy, 70);
+    sun.addColorStop(0, "rgba(255,255,250,1)"); sun.addColorStop(.12, "rgba(255,225,200,.9)"); sun.addColorStop(.45, "rgba(255,150,100,.25)"); sun.addColorStop(1, "rgba(255,120,80,0)");
+    ctx.fillStyle = sun; ctx.fillRect(sunX - 70, sy - 70, 140, 140);
     raf = requestAnimationFrame(draw);
   }
   raf = requestAnimationFrame(draw);
-  return () => { dead = true; cancelAnimationFrame(raf); ro.disconnect(); mo.disconnect(); };
+  return () => { dead = true; cancelAnimationFrame(raf); ro.disconnect(); };
 }
 let lfStop = () => {};
 /* ================= Magic bento ================= */
@@ -1594,25 +1605,22 @@ function pageLanding() {
     <a class="btn primary" href="#/reports">Open dashboard →</a>
   </div></header>
 
-  <section class="l-hero2">
-    <div class="l-wrap l-hero2-copy">
+  <section class="sun-wrap"><div class="sun" id="sun">
+    <canvas class="sun-canvas" aria-hidden="true"></canvas>
+    <div class="sun-copy">
       <span class="eyebrow">● Intelligent payment reconciliation</span>
       <h1>Every payment, <em>reconciled</em> and explained.</h1>
       <p class="lead">LedgerLens matches your internal ledger, payment gateways and bank settlements, then finds what's missing, duplicated, delayed or mismatched. It tells you why in plain English and keeps a tamper-evident record of every decision.</p>
-      <div class="cta"><a class="btn primary lg" href="#/reports">Launch dashboard</a><a class="btn lg" href="#l-features" data-scroll>Explore features</a></div>
+      <div class="cta"><a class="btn primary lg" href="#/reports">Launch dashboard</a><a class="btn lg sun-ghost" href="#l-features" data-scroll>Explore features</a></div>
     </div>
-    <div class="lf" id="lf" aria-label="Pipeline: ingest, reconcile, explain">
-      <canvas class="lf-canvas" aria-hidden="true"></canvas>
-      <div class="lf-stages">
-        ${[
-          ["Ingest", `${(ing.ledger + ing.gateway + ing.bank) || 0}`, "records", `Ledger, ${(ing.gateways || []).length || 1} gateways and ${(ing.bank_accounts || []).length || 1} bank accounts, via CSV or the bank API.`],
-          ["Reconcile", `${recs ? (clean / recs * 100).toFixed(1) : "–"}`, "% clean", `Exact, composite, aggregate and scored matching at ${Math.round((st.matches?.avg_confidence || 0) * 100)}% average confidence.`],
-          ["Explain", `${st.discrepancies ?? 0}`, "issues", "Each one gets a cause, a next step and a hash-chained audit trail."],
-        ].map(([l, v, u, d], i) => `<div class="lf-stage" data-stage="${i}"><span class="lf-stem"></span><div class="lf-label">${l}</div>
-          <div class="lf-value"><span class="num">${v}</span><small>${u}</small></div><p>${d}</p></div>`).join("")}
-      </div>
+    <div class="sun-cols" role="list">
+      ${[
+        [`${(ing.ledger + ing.gateway + ing.bank) || 0} records`, "Ingest", `Ledger, ${(ing.gateways || []).length || 1} gateways and ${(ing.bank_accounts || []).length || 1} bank accounts arrive by CSV or the bank API, then get normalised.`],
+        [`${recs ? (clean / recs * 100).toFixed(1) : "–"}% clean`, "Reconcile", `Exact, composite, aggregate and scored matching at ${Math.round((st.matches?.avg_confidence || 0) * 100)}% average confidence.`],
+        [`${st.discrepancies ?? 0} issues`, "Explain", "Every gap gets a cause, a next step, a reviewer and a hash-chained audit trail."],
+      ].map(([m, t, d], i) => `<div class="sun-col" role="listitem" data-i="${i}" tabindex="0"><div class="sun-meta">${m}</div><div class="sun-name">${t}</div><p>${d}</p></div>`).join("")}
     </div>
-  </section>
+  </div></section>
 
   <section class="l-sec" id="l-problem"><div class="l-wrap">
     <span class="eyebrow">The problem</span>
@@ -1672,7 +1680,7 @@ function pageLanding() {
   fcInst = CircularCarousel($("#flexc"), FEATURES, { label: "LedgerLens features", onSelect: i => openFeature(i, lastRun) });
 
   mountBento();
-  lfStop(); lfStop = mountLightField();
+  lfStop(); lfStop = mountSunrise();
   $$("[data-scroll]").forEach(a => a.onclick = e => { e.preventDefault(); document.querySelector(a.getAttribute("href"))?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
   $("#ltheme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 }
