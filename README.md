@@ -16,19 +16,23 @@ It needs Python 3.10+ and nothing else: no `pip install`, no database server.
 
 ## Features
 
-| | |
+| Capability | How LedgerLens does it |
 |---|---|
-| **Three-way reconciliation** | Internal ledger ↔ gateway settlement feed ↔ bank (CSV or a simulated bank API) |
-| **Two-stage matching** | Deterministic (normalised references, payout IDs) and then probabilistic scoring (amount, date, reference similarity) |
-| **Explainable discrepancies** | 16 types, each with a severity, a plain-English cause, a suggested action and the exact records involved |
-| **Human-in-the-loop** | Confirm suggested candidate matches; confirmed pairs are reused in every later run |
-| **Exception queue** | Filters, search, exception age, bulk investigate/assign/resolve/accept, CSV export |
-| **Reconciliation reports** | One per source pair per run, filterable by source and date, exportable to CSV |
-| **Trends** | Match rate over time per source pair, and open exceptions by type |
-| **Follow the money** | Each order traced from ledger → gateway → payout → bank, with the broken link highlighted |
-| **Bring your own data** | Upload three CSVs in the browser (templates provided). Column names are matched flexibly. |
-| **Tamper-evident audit trail** | Append-only, SHA-256 hash-chained events; any edit is detected |
-| **Polish** | Light and dark themes, responsive down to phone width, keyboard shortcuts |
+| **Advanced matching engine** | Five strategies run in order: reviewer links → **exact** (normalised reference) → **composite** (customer + amount + currency + date) → **aggregate** sums → **probabilistic** scoring |
+| **One-to-many & many-to-one** | Split captures (2 charges → 1 order), consolidated checkouts (1 charge → 3 orders), split bank deposits (2 lines → 1 payout), batched transfers (1 line → 2 payouts) |
+| **Partial settlement & refunds** | Partial refunds tracked per order; partially received payouts are held as `PARTIAL_SETTLEMENT` until due, then escalate; over-refunds detected |
+| **Chargebacks & reversals** | Chargebacks, dispute wins (reversals), evidence deadlines, win rate, and unrecorded chargebacks or reversals in the ledger |
+| **Exception detection & classification** | 21 types, each with a severity, a plain-English cause, a suggested action and the exact records involved |
+| **Explainable confidence** | Every match stores weighted factors (weight × score = contribution) that add up to its confidence; click any match to see them |
+| **Manual review & approval** | Investigate, assign, comment, confirm candidates, bulk actions. **Maker-checker**: closing a high-severity or $100+ exception needs a second reviewer |
+| **Immutable audit trail** | Append-only (SQLite triggers) and SHA-256 hash-chained; any edit is detected by `verify` and by the dashboard badge |
+| **Settlement delay & aging** | Exception aging buckets, on-time rate and average or worst delay per gateway, per-payout delay timeline, outstanding amounts |
+| **Multi-gateway & multi-bank** | Any number of `gateway*.csv` and `bank*.csv` files (or the bank API simulator); per-gateway fee contracts; reports broken down per gateway and per account |
+| Also | CSV upload and export, trend charts, Follow-the-money traces, light and dark themes, keyboard shortcuts, responsive layout |
+
+The demo data covers two gateways (**NovaPay**, **Paystream**) and two bank accounts
+(**Northbank Operating**, **Harbor Bank Settlement**), with one planted case for every
+feature above.
 
 ## Demo script for judges (3 minutes)
 
@@ -43,9 +47,15 @@ It needs Python 3.10+ and nothing else: no `pip install`, no database server.
    nothing is lost.
 4. **Follow the money.** Search `1005` to see a customer charged twice (two distinct
    transactions), as opposed to `1003`, which is a harmless webhook replay.
-5. **Audit trail.** Every detection and decision appears with its hash, and the badge
+5. **Chargebacks.** ORD-3007 was refunded *and* charged back, so it shows an over-refund
+   and an unrecorded chargeback. ORD-3008's dispute was won.
+6. **Aging & delays.** Paystream's PS-STL-04 is half-paid (partial settlement), and
+   NovaPay's po_7Hq2E is missing.
+7. **Approvals.** Resolve a high-severity item as one person, then approve it as another.
+   Approving your own request is refused.
+8. **Audit trail.** Every detection and decision appears with its hash, and the badge
    confirms the chain is intact.
-6. **Bring your own data.** Under Data sources, download the templates, edit them and
+9. **Bring your own data.** Under Data sources, download the templates, edit them and
    upload them.
 
 Keyboard shortcuts: `r` reports · `q` queue · `t` trace · `p` pipeline · `d` data sources ·

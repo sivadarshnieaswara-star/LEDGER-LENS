@@ -134,8 +134,9 @@ def main(argv=None) -> int:
 
     r = sub.add_parser("run", help="reconcile three source files")
     r.add_argument("--ledger", required=True)
-    r.add_argument("--gateway", required=True)
-    r.add_argument("--bank", help="bank settlement CSV")
+    r.add_argument("--gateway", required=True, action="append",
+                   help="gateway settlement CSV; repeat for several gateways")
+    r.add_argument("--bank", action="append", help="bank settlement CSV; repeat for several accounts")
     r.add_argument("--bank-api", help="bank transactions API base URL, e.g. "
                                       "http://127.0.0.1:8765/sim/bank/v1")
     r.add_argument("--snapshot", action="store_true", help="only use records dated before --as-of")
@@ -177,7 +178,7 @@ def main(argv=None) -> int:
     sv = sub.add_parser("serve", help="open the web dashboard")
     sv.add_argument("--host", default="127.0.0.1")
     sv.add_argument("--port", type=int, default=8765)
-    sv.add_argument("--data", default="samples", help="folder with ledger.csv/gateway.csv/bank.csv")
+    sv.add_argument("--data", default="samples", help="folder with ledger.csv, gateway*.csv, bank*.csv")
     sv.set_defaults(fn=cmd_serve)
 
     u = sub.add_parser("up", help="demo data (first time) + dashboard, in one command")

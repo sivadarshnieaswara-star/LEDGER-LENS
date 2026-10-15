@@ -48,12 +48,17 @@ CREATE TRIGGER IF NOT EXISTS events_no_delete BEFORE DELETE ON events
 """
 # columns added after the first release; ALTERed in if an older database is opened
 MIGRATIONS = {
-    "runs": {"reports": "TEXT DEFAULT '[]'", "pipeline": "TEXT DEFAULT '{}'", "label": "TEXT DEFAULT ''"},
-    "exceptions": {"pair": "TEXT DEFAULT ''", "candidates": "TEXT DEFAULT '[]'"},
+    "runs": {"reports": "TEXT DEFAULT '[]'", "pipeline": "TEXT DEFAULT '{}'", "label": "TEXT DEFAULT ''",
+             "disputes": "TEXT DEFAULT '[]'"},
+    "exceptions": {"pair": "TEXT DEFAULT ''", "candidates": "TEXT DEFAULT '[]'",
+                   "pending_action": "TEXT DEFAULT ''", "requested_by": "TEXT DEFAULT ''"},
+    "matches": {"factors": "TEXT DEFAULT '[]'"},
 }
 
 GENESIS = "0" * 64
-OPEN_STATES = {"open", "investigating"}
+OPEN_STATES = {"open", "investigating", "pending_approval"}
+# Maker-checker: closing a high-severity exception, or one above this amount, needs a second person.
+APPROVAL_THRESHOLD = 10_000   # cents
 LINKABLE = {"MISSING_IN_GATEWAY", "MISSING_IN_LEDGER", "UNRECORDED_REFUND"}
 
 # action → (allowed from-states, to-state, note required)
@@ -64,8 +69,14 @@ ACTIONS = {
     "link": ({"open", "investigating"}, "resolved", False),
     "resolve": ({"open", "investigating"}, "resolved", True),
     "accept": ({"open", "investigating"}, "accepted", True),
+    "approve": ({"pending_approval"}, None, False),
+    "reject": ({"pending_approval"}, "investigating", True),
     "reopen": ({"resolved", "accepted", "auto_cleared"}, "open", True),
 }
+
+
+def needs_approval(row) -> bool:
+    return row["severity"] == "high" or abs(row["amount_delta"] or 0) >= APPROVAL_THRESHOLD
 
 
 class ActionError(ValueError):
@@ -131,9 +142,11 @@ class Store:
                  json.dumps(d["payouts"]), json.dumps(d["reports"]), "{}", label))
             run_id = cur.lastrowid
             self.db.executemany(
-                "INSERT INTO matches VALUES(?,?,?,?,?,?,?)",
+                "INSERT INTO matches(run_id,layer,left_ids,right_ids,method,confidence,explanation,factors)"
+                " VALUES(?,?,?,?,?,?,?,?)",
                 [(run_id, m.layer, json.dumps(m.left), json.dumps(m.right), m.method,
-                  m.confidence, m.explanation) for m in res.matches])
+                  m.confidence, m.explanation, json.dumps(m.factors)) for m in res.matches])
+            self.db.execute("UPDATE runs SET disputes=? WHERE id=?", (json.dumps(d["disputes"]), run_id))
             self.db.executemany(
                 "INSERT INTO run_discrepancies VALUES(?,?,?,?,?,?,?)",
                 [(run_id, x.fingerprint, x.kind, x.severity, x.pair, x.amount_delta, x.summary)
@@ -206,6 +219,20 @@ class Store:
             if action == "link":
                 self._link(row, candidate, actor.strip(), note.strip())
                 return self.exception(fp)
+            if action in ("resolve", "accept") and needs_approval(row):
+                self.db.execute("UPDATE exceptions SET pending_action=?, requested_by=? WHERE fingerprint=?",
+                                (action, actor.strip(), fp))
+                self._set_status(fp, "pending_approval")
+                self._event(fp, None, actor.strip(), f"request_{action}", frm, "pending_approval",
+                            note.strip() + " · awaiting approval by a second reviewer")
+                return self.exception(fp)
+            if action == "approve":
+                if actor.strip().lower() == (row["requested_by"] or "").lower():
+                    raise ActionError("maker-checker: a different reviewer must approve this request")
+                to = {"resolve": "resolved", "accept": "accepted"}[row["pending_action"]]
+            if action in ("approve", "reject"):
+                self.db.execute("UPDATE exceptions SET pending_action='', requested_by='' WHERE fingerprint=?",
+                                (fp,))
             if to:
                 self._set_status(fp, to)
             if action == "assign":
@@ -250,7 +277,8 @@ class Store:
     def _run(self, r: sqlite3.Row, full: bool = True) -> dict:
         out = {"id": r["id"], "created_at": r["created_at"], "as_of": r["as_of"], "label": r["label"],
                "sources": json.loads(r["sources"]), "stats": json.loads(r["stats"]),
-               "reports": json.loads(r["reports"] or "[]"), "pipeline": json.loads(r["pipeline"] or "{}")}
+               "reports": json.loads(r["reports"] or "[]"), "pipeline": json.loads(r["pipeline"] or "{}"),
+               "disputes": json.loads(r["disputes"] or "[]")}
         if full:
             out["traces"] = json.loads(r["traces"])
             out["payouts"] = json.loads(r["payouts"])
@@ -291,7 +319,7 @@ class Store:
     def exceptions(self, status: str | None = None) -> list[dict]:
         q, args = "SELECT * FROM exceptions", ()
         if status == "active":
-            q += " WHERE status IN ('open','investigating')"
+            q += " WHERE status IN ('open','investigating','pending_approval')"
         elif status:
             q, args = q + " WHERE status=?", (status,)
         q += (" ORDER BY CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,"
@@ -340,7 +368,8 @@ class Store:
         return {"human_actions": human, "statuses": statuses, "manual_links": links}
 
     def matches(self, run_id: int) -> list[dict]:
-        return [{**dict(r), "left_ids": json.loads(r["left_ids"]), "right_ids": json.loads(r["right_ids"])}
+        return [{**dict(r), "left_ids": json.loads(r["left_ids"]), "right_ids": json.loads(r["right_ids"]),
+                 "factors": json.loads(r["factors"] or "[]")}
                 for r in self.db.execute("SELECT * FROM matches WHERE run_id=?", (run_id,))]
 
     @staticmethod

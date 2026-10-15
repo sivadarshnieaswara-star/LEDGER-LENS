@@ -116,6 +116,25 @@ tbody tr.sel td { background: var(--accent-soft) !important; }
 .age { font-variant-numeric: tabular-nums; }
 .age.old { color: var(--high); font-weight: 600; }
 kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; }
+.factors { display: grid; gap: 8px; }
+.frow { display: grid; grid-template-columns: 150px 1fr 54px; gap: 10px; align-items: center; font-size: 13px; }
+.frow .fbar { height: 10px; background: var(--row); border-radius: 5px; overflow: hidden; position: relative; }
+.frow .fbar i { position: absolute; inset: 0 auto 0 0; background: var(--line); }
+.frow .fbar b { position: absolute; inset: 0 auto 0 0; background: var(--ok); }
+.frow .fd { grid-column: 1 / -1; color: var(--muted); font-size: 12px; margin-top: -4px; }
+.stack { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--row); margin: 6px 0 4px; }
+.stack i { display: block; height: 100%; }
+.approval { background: var(--med-soft); color: var(--ink); border-radius: 10px; padding: 12px 14px; margin: 10px 0; }
+.buckets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 0 8px; }
+.bucket { border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.bucket .v { font-size: 22px; font-weight: 700; }
+.bucket .bars { display: flex; gap: 3px; height: 8px; margin-top: 10px; border-radius: 4px; overflow: hidden; background: var(--row); }
+.badge2 { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--low-soft); color: var(--low); white-space: nowrap; }
+.badge2.won { background: var(--ok-soft); color: var(--ok); } .badge2.open { background: var(--med-soft); color: var(--med); }
+.badge2.expired { background: var(--high-soft); color: var(--high); }
+.st.pending_approval { color: var(--accent); } .st.partially_settled { color: var(--med); }
+.pill.partially_settled { background: var(--med-soft); color: var(--med); }
+@media (max-width: 900px) { .buckets { grid-template-columns: 1fr 1fr; } .frow { grid-template-columns: 110px 1fr 44px; } }
 @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } .kbar { grid-template-columns: 110px 1fr 28px; } }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .r { text-align: right; }
@@ -268,6 +287,9 @@ const ICON = {
   pipeline: '<rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="8.5" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v3h11V8M12 11v5"/>',
   sources: '<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/>',
   audit: '<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  disputes: '<path d="M12 3v18M5 8h14M5 8l-3 7h6zM19 8l-3 7h6z"/>',
+  aging: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>',
+  approvals: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
 };
 const svgI = k => `<svg viewBox="0 0 24 24">${ICON[k]}</svg>`;
 const CHEV = '<svg class="chev" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M9 6l6 6-6 6"/></svg>';
@@ -284,10 +306,14 @@ async function refresh() {
 
 function renderNav() {
   const route = location.hash.slice(2).split("/")[0] || "reports";
-  const active = S.exceptions.filter(e => ["open", "investigating"].includes(e.status)).length;
+  const active = S.exceptions.filter(e => ["open", "investigating", "pending_approval"].includes(e.status)).length;
+  const pending = S.exceptions.filter(e => e.status === "pending_approval").length;
+  const openDisputes = (S.summary?.run?.disputes || []).filter(d => d.status !== "won").length;
   const item = (k, label, extra = "") => `<a href="#/${k}" class="${route === k ? "on" : ""}">${svgI(k)}<span class="label">${label}</span>${extra}</a>`;
   $("#nav").innerHTML = item("reports", "Reconciliation") + item("queue", "Exception queue", active ? `<span class="count">${active}</span>` : "")
+    + item("approvals", "Approvals", pending ? `<span class="count">${pending}</span>` : "")
     + item("trace", "Follow the money") + item("payouts", "Payouts")
+    + item("disputes", "Chargebacks", openDisputes ? `<span class="count">${openDisputes}</span>` : "") + item("aging", "Aging & delays")
     + `<div class="group">${item("pipeline", "Pipeline", CHEV)}${item("sources", "Data sources", CHEV)}${item("audit", "Audit trail", CHEV)}</div>`;
 }
 
@@ -404,6 +430,9 @@ async function pageReport(runId, pair) {
       <div class="grow"></div><a class="btn" href="/api/export/report/${r.run.id}/${pair}.csv" download>⤓ Export CSV</a></div>`
     + kpis([["Reconciled amount", amt(r.reconciled_amount, r.currency)], ["Matched percentage", pct(r.matched_pct), `${r.clean} of ${r.records} records clean`],
             ["Amount difference", amt(r.mismatched_amount, r.currency), `${r.discrepancies.length} discrepancies`]])
+    + (r.breakdown?.length ? `<div class="card"><h2>By source <span class="sub">every gateway and bank account in this run</span></h2><div class="tbox"><table><thead><tr><th>Source</th><th>Type</th><th>Records</th><th>Matched</th><th class="r">Mismatched</th></tr></thead><tbody>
+        ${r.breakdown.map(b => `<tr><td><b>${esc(b.source)}</b></td><td><span class="badge2">${b.type}</span></td><td class="num">${b.clean} / ${b.records}</td><td>${pctCell(b.matched_pct)}</td><td class="r num">${amt(b.mismatched_amount, r.currency)}</td></tr>`).join("")}
+      </tbody></table></div></div>` : "")
     + `<div class="card"><div class="tabs2"><button data-t="disc" class="${tab === "disc" ? "on" : ""}">Discrepancies (${r.discrepancies.length})</button>
          <button data-t="match" class="${tab === "match" ? "on" : ""}">Matched records (${r.matches.length})</button></div>
        <div class="tbox">${tab === "disc" ? discTable(r.discrepancies) : matchTable(r.matches)}</div></div>`;
@@ -422,23 +451,43 @@ function discTable(list, selectable = false) {
       <td class="hide-sm"><span class="st ${e.status}">${e.status.replace("_", " ")}</span></td></tr>`).join("")}</tbody></table>`;
 }
 
+function factorsHtml(fs, total) {
+  if (!fs?.length) return "";
+  return `<div class="factors">${fs.map(f => `<div class="frow"><span>${esc(f.factor)} <span class="muted">×${f.weight}</span></span>
+      <span class="fbar" title="weight ${f.weight} · score ${f.score}"><i style="width:${f.weight * 100}%"></i><b style="width:${f.contribution * 100}%"></b></span>
+      <b class="num r">+${Math.round(f.contribution * 100)}</b><span class="fd">${esc(f.detail)}</span></div>`).join("")}
+    <div class="frow" style="border-top:1px solid var(--line);padding-top:8px"><b>Confidence</b><span></span><b class="num r">${Math.round(total * 100)}%</b></div></div>`;
+}
+function openMatch(m) {
+  $("#overlay").innerHTML = `<div class="scrim"></div><aside class="drawer" role="dialog" aria-label="Match explanation">
+    <button class="x" aria-label="Close">×</button><span class="method ${m.method.split(" ")[0]}">${esc(m.method)}</span>
+    <h2>${m.left_ids.map(esc).join(" + ")} ↔ ${m.right_ids.map(esc).join(" + ")}</h2>
+    <p>${m.left_ids.length > 1 || m.right_ids.length > 1 ? `<b>${m.left_ids.length}:${m.right_ids.length} match.</b> ` : ""}${esc(m.explanation)}</p>
+    <h3>Why this confidence · ${Math.round(m.confidence * 100)}%</h3>
+    <p class="muted" style="font-size:13px">Each factor's weight (grey) times its score gives its contribution (green). The contributions add up to the confidence.</p>
+    ${factorsHtml(m.factors, m.confidence)}</aside>`;
+  const close = () => { $("#overlay").innerHTML = ""; };
+  $(".scrim").onclick = close; $(".x").onclick = close;
+}
 function matchTable(list) {
   if (!list.length) return `<div class="empty">No matches in this run.</div>`;
+  S.matchList = list;
   return `<table><thead><tr><th>Source A</th><th>Source B</th><th>Method</th><th>Confidence</th><th class="hide-sm">Why</th></tr></thead><tbody>
-    ${list.map(m => `<tr><td class="mono">${m.left_ids.map(esc).join(", ")}</td><td class="mono">${m.right_ids.map(esc).join(", ")}</td>
-      <td><span class="method ${m.method}">${esc(m.method)}</span></td><td>${pctCell(m.confidence)}</td>
+    ${list.map((m, i) => `<tr class="click" data-mi="${i}"><td class="mono">${m.left_ids.map(esc).join(", ")}</td><td class="mono">${m.right_ids.map(esc).join(", ")}</td>
+      <td><span class="method ${m.method.split(" ")[0]}">${esc(m.method)}</span></td><td>${pctCell(m.confidence)}</td>
       <td class="hide-sm muted" style="font-size:13px">${esc(m.explanation)}</td></tr>`).join("")}</tbody></table>`;
 }
 
-function bindRows() { $$("tr[data-fp]").forEach(r => r.onclick = e => { if (e.target.closest(".chk")) return; openDrawer(r.dataset.fp); }); }
+function bindMatches() { $$("tr[data-mi]").forEach(r => r.onclick = () => openMatch(S.matchList[+r.dataset.mi])); }
+function bindRows() { bindMatches(); $$("tr[data-fp]").forEach(r => r.onclick = e => { if (e.target.closest(".chk")) return; openDrawer(r.dataset.fp); }); }
 
 /* ---------- Exception queue ---------- */
 function pageQueue() {
-  const isActive = e => ["open", "investigating"].includes(e.status);
+  const isActive = e => ["open", "investigating", "pending_approval"].includes(e.status);
   const active = S.exceptions.filter(isActive);
   const money = active.filter(e => !["DUPLICATE_WEBHOOK", "DELAYED_SETTLEMENT", "REFERENCE_MISMATCH"].includes(e.kind)).reduce((t, e) => t + Math.abs(e.amount_delta), 0);
   const cands = active.filter(e => e.candidates?.length).length;
-  const STAT = [["active", "Active"], ["open", "Open"], ["investigating", "Investigating"], ["resolved", "Resolved"], ["accepted", "Accepted"], ["auto_cleared", "Auto-cleared"], ["", "All"]];
+  const STAT = [["active", "Active"], ["open", "Open"], ["investigating", "Investigating"], ["pending_approval", "Awaiting approval"], ["resolved", "Resolved"], ["accepted", "Accepted"], ["auto_cleared", "Auto-cleared"], ["", "All"]];
   const match = (e, st) => st === "" || (st === "active" ? isActive(e) : e.status === st);
   const rows = S.exceptions.filter(e => match(e, S.qStatus) && (!S.qSev || e.severity === S.qSev)
     && (!S.q || (e.summary + e.fingerprint + JSON.stringify(e.refs)).toLowerCase().includes(S.q.toLowerCase())));
@@ -453,6 +502,7 @@ function pageQueue() {
         <span style="flex:1"></span><input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S.q)}">
         <a class="btn" href="/api/export/exceptions.csv${S.qStatus ? "?status=" + S.qStatus : ""}" download>⤓ Export CSV</a></div>
       ${S.sel.size ? `<div class="bulkbar"><b>${S.sel.size} selected</b><span style="flex:1"></span>
+        <input type="text" id="bactor" placeholder="Your name" value="${esc(lsGet("ll_actor") || "")}" style="width:130px">
         <input type="text" id="bnote" placeholder="Note for the audit trail" style="min-width:220px">
         <button class="btn" data-bulk="investigate">Investigate</button><button class="btn" data-bulk="assign">Assign to me</button>
         <button class="btn" data-bulk="accept">Accept</button><button class="btn primary" data-bulk="resolve">Resolve</button>
@@ -465,8 +515,8 @@ function pageQueue() {
   $("#selall") && ($("#selall").onchange = e => { rows.forEach(r => e.target.checked ? S.sel.add(r.fingerprint) : S.sel.delete(r.fingerprint)); pageQueue(); });
   $("#bclear") && ($("#bclear").onclick = () => { S.sel.clear(); pageQueue(); });
   $$("[data-bulk]").forEach(b => b.onclick = async () => {
-    const actor = lsGet("ll_actor") || prompt("Your name for the audit trail:") || "";
-    if (!actor.trim()) return;
+    const actor = $("#bactor").value.trim();
+    if (!actor) { toast("Add your name for the audit trail"); $("#bactor").focus(); return; }
     lsSet("ll_actor", actor);
     const action = b.dataset.bulk, note = action === "assign" ? actor : $("#bnote").value.trim();
     if (["resolve", "accept"].includes(action) && !note) { toast("Add a note before resolving or accepting"); $("#bnote").focus(); return; }
@@ -481,6 +531,8 @@ function pageQueue() {
 const ACTIONS = {
   investigate: { from: ["open"], label: "Investigate" },
   resolve: { from: ["open", "investigating"], label: "Resolve", primary: true },
+  approve: { from: ["pending_approval"], label: "Approve", primary: true },
+  reject: { from: ["pending_approval"], label: "Reject" },
   accept: { from: ["open", "investigating"], label: "Accept as-is" },
   reopen: { from: ["resolved", "accepted", "auto_cleared"], label: "Reopen" },
   assign: { label: "Assign" }, comment: { label: "Comment" },
@@ -493,12 +545,14 @@ async function openDrawer(fp) {
     <span class="sev ${e.severity}">${e.severity}</span> <span class="kind" style="display:inline">${esc(e.kind)}</span>
     <h2>${esc(e.summary)}</h2>
     <p><span class="st ${e.status}">${e.status.replace("_", " ")}</span>${e.assignee ? ` · assigned to <b>${esc(e.assignee)}</b>` : ""}${e.amount_delta ? ` · impact <b>${amt(e.amount_delta, e.currency)}</b>` : ""}</p>
+    ${e.status === "pending_approval" ? `<div class="approval"><b>Awaiting approval.</b> ${esc(e.requested_by)} asked to <b>${esc(e.pending_action)}</b> this exception. High-severity items and items of $100 or more need a second reviewer (maker-checker), so ${esc(e.requested_by)} can't approve their own request.</div>` : ""}
+    ${["open", "investigating"].includes(e.status) && (e.severity === "high" || Math.abs(e.amount_delta) >= 10000) ? `<p class="muted" style="font-size:12.5px">ⓘ Resolving or accepting this needs approval from a second reviewer.</p>` : ""}
     <h3>Why this was flagged</h3><p>${esc(e.explanation)}</p>
     <h3>Suggested action</h3><p class="suggest">${esc(e.suggested_action)}</p>
     ${e.candidates.length ? `<h3>Candidate matches · probabilistic</h3>${e.candidates.map(c => `
       <div class="cand"><div><div class="mono">${esc(c.id)}</div><div>${esc(c.label)}</div></div>
         <div style="text-align:right"><div class="score">${Math.round(c.score * 100)}%</div>${open ? `<button class="btn dark" data-link="${esc(c.id)}">Confirm match</button>` : ""}</div>
-        <div class="why">${c.reasons.map(esc).join(" · ")}</div></div>`).join("")}` : ""}
+        <div class="why" style="grid-column:1/-1">${factorsHtml(c.factors, c.score) || c.reasons.map(esc).join(" · ")}</div></div>`).join("")}` : ""}
     <h3>Records involved</h3>
     <div class="refs">${Object.entries(e.refs).flatMap(([k, ids]) => ids.map(i => `<span class="ref"><b>${esc(k)}</b> ${esc(i)}</span>`)).join("")}</div>
     <h3>Review</h3>
@@ -540,12 +594,12 @@ async function pageTrace() {
     const sep = "<hr style='border:0;border-top:1px dashed var(--line);margin:6px 0'>";
     $("#chains").innerHTML = list.map(t => {
       const bad = new Set(t.discrepancies.map(f => f.split(":")[0]));
-      return `<div class="chain"><div class="hd"><b>${esc(t.ref)}</b><span class="pill ${t.status}">${t.status.replace("_", " ")}</span>
+      return `<div class="chain"><div class="hd"><b>${esc(t.ref)}</b><span class="pill ${t.status}">${t.status.replace("_", " ")}</span>${t.lifecycle ? `<span class="badge2">${t.lifecycle}</span>` : ""}${t.disputed ? `<span class="badge2 open">disputed</span>` : ""}
           ${t.discrepancies.map(f => `<span class="link" data-fp="${esc(f)}">${esc(f.split(":")[0])}</span>`).join(" ")}</div>
         ${t.ledger.length ? node("Internal ledger", t.ledger.map(l => `<div class="mono">${esc(l.id)}</div>${l.kind} ${amt(l.amount, l.currency)}`).join(sep), ["DUPLICATE_LEDGER_ENTRY", "AMOUNT_MISMATCH"].some(k => bad.has(k)) ? "bad" : "") : node("Internal ledger", "No entry", "none bad")}
-        ${t.gateway.length ? node("Gateway", t.gateway.map(g => `<div class="mono">${esc(g.id)}${g.copies > 1 ? ` ×${g.copies}` : ""}</div>${g.kind} ${amt(g.gross, g.currency)} · fee ${amt(g.fee, g.currency)}`).join(sep), ["DUPLICATE_CHARGE", "FEE_VARIANCE", "UNRECORDED_REFUND"].some(k => bad.has(k)) ? "bad" : "") : node("Gateway", "Not captured", "none bad")}
+        ${t.gateway.length ? node("Gateway", t.gateway.map(g => `<div class="mono">${esc(g.id)}${g.copies > 1 ? ` ×${g.copies}` : ""}</div>${esc(g.gateway)} · ${g.kind.replace("_", " ")} ${amt(g.gross, g.currency)}`).join(sep), ["DUPLICATE_CHARGE", "FEE_VARIANCE", "UNRECORDED_REFUND"].some(k => bad.has(k)) ? "bad" : "") : node("Gateway", "Not captured", "none bad")}
         ${t.payouts.length ? node("Payout", t.payouts.map(p => `<div class="mono">${esc(p.id)}</div>due ${dayFmt(p.expected_date)} · <span class="st ${p.status}">${p.status.replace("_", " ")}</span>`).join(sep), t.payouts.some(p => p.status === "missing") ? "bad" : "") : node("Payout", "–", "none")}
-        ${t.payouts.some(p => p.bank_id) ? node("Bank", t.payouts.filter(p => p.bank_id).map(p => `<div class="mono">${esc(p.bank_id)}</div>received ${dayFmt(p.bank_date)}`).join(sep), ["PAYOUT_AMOUNT_MISMATCH", "DELAYED_SETTLEMENT"].some(k => bad.has(k)) ? "bad" : "") : node("Bank", "Not received", "none")}
+        ${t.payouts.some(p => p.bank_id) ? node("Bank", t.payouts.filter(p => p.bank_id).map(p => `<div class="mono">${esc(p.bank_id)}</div>${esc(p.bank_account || "")} · received ${dayFmt(p.bank_date)}`).join(sep), ["PAYOUT_AMOUNT_MISMATCH", "DELAYED_SETTLEMENT"].some(k => bad.has(k)) ? "bad" : "") : node("Bank", "Not received", "none")}
       </div>`; }).join("") || `<div class="empty">No matching orders.</div>`;
     $$("#chains [data-fp]").forEach(el => el.onclick = () => openDrawer(el.dataset.fp));
   };
@@ -555,6 +609,70 @@ async function pageTrace() {
       <div class="tbox" id="chains"></div></div>`;
   $("#q").oninput = e => { S.q = e.target.value; draw(); };
   draw();
+}
+
+/* ---------- Approvals ---------- */
+function pageApprovals() {
+  const rows = S.exceptions.filter(e => e.status === "pending_approval");
+  $("#page").innerHTML = head("Approvals", "Maker-checker: high-severity or $100+ closures need a second reviewer")
+    + kpis([["Awaiting approval", rows.length, "Requested by one reviewer"],
+            ["Money behind them", amt(rows.reduce((t, e) => t + Math.abs(e.amount_delta), 0)), "Absolute impact"],
+            ["Your name", esc(lsGet("ll_actor") || "not set"), "You can't approve your own requests"]])
+    + `<div class="card"><div class="tbox">${rows.length ? `<table><thead><tr><th>Severity</th><th>Exception</th><th>Request</th><th>Requested by</th><th class="r">Impact</th></tr></thead><tbody>
+      ${rows.map(e => `<tr class="click" data-fp="${esc(e.fingerprint)}"><td><span class="sev ${e.severity}">${e.severity}</span></td><td>${esc(e.summary)}<div class="kind">${esc(e.kind)}</div></td>
+        <td><b>${esc(e.pending_action)}</b></td><td>${esc(e.requested_by)}</td><td class="r num">${amt(e.amount_delta, e.currency)}</td></tr>`).join("")}</tbody></table>`
+      : `<div class="empty">Nothing waiting. When someone resolves a high-severity or $100+ exception, it lands here for a second reviewer.</div>`}</div></div>`;
+  bindRows();
+}
+
+/* ---------- Chargebacks ---------- */
+function pageDisputes() {
+  const ds = S.summary.run?.disputes || [];
+  const open = ds.filter(d => d.status === "open"), won = ds.filter(d => d.status === "won");
+  const sum = l => l.reduce((t, d) => t + d.amount, 0);
+  $("#page").innerHTML = head("Chargebacks & reversals", "Every dispute across gateways, with its evidence deadline")
+    + kpis([["Open disputes", open.length, `${amt(sum(open))} at risk`],
+            ["Won (reversed)", won.length, `${amt(sum(won))} recovered`],
+            ["Win rate", ds.length ? pct(won.length / ds.length) : "–", `${ds.length} disputes in total`]])
+    + `<div class="card"><div class="tbox">${ds.length ? `<table><thead><tr><th>Chargeback</th><th>Order</th><th>Gateway</th><th class="r">Amount</th><th>Opened</th><th>Deadline</th><th>Status</th><th class="hide-sm">In ledger</th></tr></thead><tbody>
+      ${ds.sort((a, b) => a.days_left - b.days_left).map(d => `<tr class="click" data-fp="${d.status === "won" ? "" : "CHARGEBACK_OPEN:" + esc(d.id)}">
+        <td class="mono">${esc(d.id)}${d.reversal_id ? `<div class="kind">↩ ${esc(d.reversal_id)}</div>` : ""}</td><td>${esc(d.ref)}</td><td>${esc(d.gateway)}</td>
+        <td class="r num">${amt(d.amount, d.currency)}<div class="kind" style="font-family:inherit">+ ${amt(d.fee, d.currency)} fee</div></td>
+        <td class="num">${dayFmt(d.opened)}</td>
+        <td class="num">${dayFmt(d.deadline)}${d.status === "open" ? `<div class="kind" style="font-family:inherit;color:${d.days_left <= 2 ? "var(--high)" : "inherit"}">${d.days_left} day${d.days_left === 1 ? "" : "s"} left</div>` : ""}</td>
+        <td><span class="badge2 ${d.status}">${d.status}</span></td><td class="hide-sm">${d.recorded_in_ledger ? "✓" : `<span style="color:var(--high)">missing</span>`}</td></tr>`).join("")}</tbody></table>`
+      : `<div class="empty">No chargebacks in this run.</div>`}</div></div>`;
+  $$("tr[data-fp]").forEach(r => r.onclick = () => r.dataset.fp && openDrawer(r.dataset.fp));
+}
+
+/* ---------- Aging & settlement delay ---------- */
+function pageAging() {
+  const active = S.exceptions.filter(e => ["open", "investigating", "pending_approval"].includes(e.status));
+  const B = [["0–1 days", 0, 1], ["2–3 days", 2, 3], ["4–7 days", 4, 7], ["8+ days", 8, 1e9]];
+  const sevC = { high: "var(--high)", medium: "var(--med)", low: "var(--low)" };
+  const st = S.summary.run?.stats?.settlement || { by_gateway: [], by_account: [] };
+  const ps = S.summary.run?.payouts || [];
+  const maxDelay = Math.max(1, ...ps.map(p => Math.abs(p.delay_days || 0)));
+  $("#page").innerHTML = head("Aging & settlement delays", "How long problems stay open and how late money arrives")
+    + `<div class="card"><h2>Exception aging <span class="sub">${active.length} active, by days since first detected</span></h2><div class="buckets">
+      ${B.map(([l, lo, hi]) => { const r = active.filter(e => e.age_days >= lo && e.age_days <= hi);
+        return `<div class="bucket"><div class="muted">${l}</div><div class="v">${r.length}</div><div class="muted" style="font-size:12px">${amt(r.reduce((t, e) => t + Math.abs(e.amount_delta), 0))}</div>
+          <div class="bars">${["high", "medium", "low"].map(s => { const n = r.filter(e => e.severity === s).length; return n ? `<i style="flex:${n};background:${sevC[s]}" title="${n} ${s}"></i>` : ""; }).join("")}</div></div>`; }).join("")}
+    </div></div>
+    <div class="card"><h2>Settlement performance by gateway</h2><div class="tbox"><table><thead><tr><th>Gateway</th><th>Payouts</th><th>On time</th><th>Avg delay</th><th>Worst</th><th>Partial</th><th>Missing</th><th class="r">Outstanding</th></tr></thead><tbody>
+      ${st.by_gateway.map(g => `<tr><td><b>${esc(g.gateway)}</b></td><td class="num">${g.settled} / ${g.payouts} settled</td><td>${g.settled ? pctCell(g.on_time / g.settled) : "–"}</td>
+        <td class="num">${g.avg_delay == null ? "–" : (g.avg_delay > 0 ? "+" : "") + g.avg_delay + "d"}</td><td class="num">${g.max_delay == null ? "–" : g.max_delay + "d"}</td>
+        <td class="num">${g.partial}</td><td class="num" style="color:${g.missing ? "var(--high)" : "inherit"}">${g.missing}</td><td class="r num">${amt(g.outstanding)}</td></tr>`).join("")}
+    </tbody></table></div></div>
+    <div class="card"><h2>Payout timeline <span class="sub">days late (+) or early (−) versus T+2; overdue for unsettled</span></h2><div class="tbox"><table><tbody>
+      ${ps.slice().sort((a, b) => (b.delay_days ?? -99) - (a.delay_days ?? -99)).map(p => { const d = p.delay_days ?? 0;
+        return `<tr><td style="width:150px"><span class="mono">${esc(p.id)}</span><div class="kind" style="font-family:inherit">${esc(p.gateway)}${p.bank_account ? " → " + esc(p.bank_account) : ""}</div></td>
+        <td><div class="stack" style="max-width:420px"><i style="width:${Math.min(100, Math.abs(d) / maxDelay * 100)}%;background:${p.status === "missing" ? "var(--high)" : d > 1 ? "var(--med)" : "var(--ok)"}"></i></div></td>
+        <td class="num" style="width:70px">${p.delay_days == null ? "–" : (d > 0 ? "+" : "") + d + "d"}</td><td style="width:140px"><span class="st ${p.status}">${p.status.replace("_", " ")}</span></td></tr>`; }).join("")}
+    </tbody></table></div></div>
+    <div class="card"><h2>Bank accounts</h2><div class="tbox"><table><thead><tr><th>Account</th><th>Lines</th><th class="r">Credits</th><th class="r">Debits</th></tr></thead><tbody>
+      ${st.by_account.map(a => `<tr><td><b>${esc(a.account)}</b></td><td class="num">${a.lines}</td><td class="r num">${amt(a.credits)}</td><td class="r num">${amt(a.debits)}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
 }
 
 /* ---------- Payouts ---------- */
@@ -567,9 +685,9 @@ function pagePayouts() {
             ["Missing", ps.filter(p => p.status === "missing").length, amt(ps.filter(p => p.status === "missing").reduce((t, p) => t + p.expected_amount, 0))]])
     + `<div class="card"><h2>Payout settlements</h2><div class="tbox"><table><thead><tr><th>Payout</th><th class="r">Expected</th><th class="hide-sm">Due</th><th>Bank line</th><th class="r">Received</th><th class="r">Gap</th><th>Status</th></tr></thead><tbody>
     ${ps.map(p => { const gap = p.bank_amount == null ? null : p.bank_amount - p.expected_amount; return `<tr>
-      <td><span class="mono">${esc(p.id)}</span><div class="kind" style="font-family:inherit">${p.event_ids.length} transactions</div></td>
+      <td><span class="mono">${esc(p.id)}</span><div class="kind" style="font-family:inherit">${esc(p.gateway)} · ${p.event_ids.length} transactions</div></td>
       <td class="r num">${amt(p.expected_amount, p.currency)}</td><td class="hide-sm num">${dayFmt(p.expected_date)}</td>
-      <td><span class="mono">${esc(p.bank_id || "–")}</span><div class="kind" style="font-family:inherit">${p.bank_date ? dayFmt(p.bank_date) : ""}</div></td>
+      <td><span class="mono">${esc(p.bank_id || "–")}</span><div class="kind" style="font-family:inherit">${esc(p.bank_account || "")} ${p.bank_date ? "· " + dayFmt(p.bank_date) : ""}</div></td>
       <td class="r num">${p.bank_amount == null ? "–" : amt(p.bank_amount, p.currency)}</td>
       <td class="r num" style="color:${gap ? "var(--high)" : "var(--ok)"}">${gap == null ? "–" : gap ? amt(gap, p.currency) : "✓"}</td>
       <td><span class="st ${p.status}">${p.status.replace("_", " ")}</span></td></tr>`; }).join("")}
@@ -595,12 +713,12 @@ function pagePipeline() {
     ${A("M190,94 V117 H470 V138")}${A("M520,94 V138")}${A("M850,94 V117 H570 V138")}
     ${A("M520,214 V258")}${A("M490,334 V378")}${A("M590,334 V356 H815 V378")}
     ${A("M490,454 V498")}${A("M490,574 V618")}${A("M490,694 V738")}${A("M490,814 V858")}
-    ${B(40, 20, 300, bankApi ? "Bank API Simulator" : "Bank CSV or API Simulator", `${ing.bank} lines · ${bankApi ? "via API" : "via CSV"}`, "#/sources", "bank")}
-    ${B(380, 20, 280, "Gateway Settlement Feed", `${ing.gateway} events`, "#/sources", "gateway")}
+    ${B(40, 20, 300, bankApi ? "Bank API Simulator" : "Bank CSV or API Simulator", `${(ing.bank_accounts || []).length || 1} accounts · ${ing.bank} lines · ${bankApi ? "API" : "CSV"}`, "#/sources", "bank")}
+    ${B(380, 20, 280, "Gateway Settlement Feed", `${(ing.gateways || []).length || 1} gateways · ${ing.gateway} events`, "#/sources", "gateway")}
     ${B(700, 20, 300, "Internal Payment Ledger", `${ing.ledger} entries`, "#/sources", "ledger")}
     ${B(370, 140, 300, "Ingestion and Normalization", `${ing.duplicates_removed} duplicates · ${ing.references_normalised} refs normalised`, "#/trace", "ingest")}
-    ${B(390, 260, 260, "Deterministic Matching", `${det.ledger_gateway + det.gateway_bank} exact · ${det.manual} reviewer links`, `#/reports/${run.id}/ledger_gateway`, "det")}
-    ${B(340, 380, 300, "Probabilistic Candidate Matching", `${pr.auto_matched + pr.payouts_matched} auto · ${pr.suggested} suggested`, "#/queue", "prob")}
+    ${B(390, 260, 260, "Deterministic Matching", `${det.ledger_gateway + det.gateway_bank + (det.composite || 0)} exact/composite · ${(det.one_to_many || 0) + (det.many_to_one || 0)} 1:N · ${det.manual} manual`, `#/reports/${run.id}/ledger_gateway`, "det")}
+    ${B(340, 380, 300, "Probabilistic Candidate Matching", `${pr.auto_matched + pr.payouts_matched} scored · ${pr.aggregate || 0} aggregate · ${pr.suggested} to review`, "#/queue", "prob")}
     ${B(680, 380, 280, "Reconciliation Reports", `${run.reports.length} source pairs`, "#/reports", "reports")}
     ${B(345, 500, 290, "Discrepancy Classifier", `${total} discrepancies · ${classes} types`, "#/queue", "class")}
     ${B(365, 620, 250, "Exception Queue", `${q.new || 0} new · ${q.auto_cleared || 0} auto-cleared`, "#/queue", "queue")}
@@ -627,9 +745,9 @@ function pageSources() {
   $("#page").innerHTML = head("Data sources", "Three independent records of the same money")
     + `<div class="srcgrid">
       <div class="srccard"><h3>${SRC_ICON["Internal ledger"]} Internal payment ledger</h3><div class="muted">CSV export · ${ing.ledger ?? "–"} entries in the last run</div><div class="path">${esc(s.sources.ledger)}</div></div>
-      <div class="srccard"><h3>${SRC_ICON["Gateway settlement feed"]} Gateway settlement feed</h3><div class="muted">CSV report · ${ing.gateway ?? "–"} events in the last run</div><div class="path">${esc(s.sources.gateway)}</div></div>
-      <div class="srccard"><h3>${SRC_ICON["Bank settlement"]} Bank settlement</h3><div class="muted">CSV file, or the bank API simulator · ${ing.bank ?? "–"} lines</div>
-        <div class="path">${esc(s.sources.bank)}</div><div class="path" style="margin-top:4px">GET <a href="/sim/bank/v1/transactions?limit=5" target="_blank">${esc(s.sources.bank_api)}/transactions</a></div></div>
+      <div class="srccard"><h3>${SRC_ICON["Gateway settlement feed"]} Gateways · ${(ing.gateways || []).length}</h3><div class="muted">${(ing.gateways || []).map(esc).join(", ") || "–"} · ${ing.gateway ?? "–"} events</div>${[].concat(s.sources.gateway).map(x => `<div class="path">${esc(x)}</div>`).join("")}</div>
+      <div class="srccard"><h3>${SRC_ICON["Bank settlement"]} Bank accounts · ${(ing.bank_accounts || []).length}</h3><div class="muted">${(ing.bank_accounts || []).map(esc).join(", ") || "–"} · ${ing.bank ?? "–"} lines · CSV or API simulator</div>
+        ${[].concat(s.sources.bank).map(x => `<div class="path">${esc(x)}</div>`).join("")}<div class="path" style="margin-top:4px">GET <a href="/sim/bank/v1/transactions?limit=5" target="_blank">${esc(s.sources.bank_api)}/transactions</a></div></div>
     </div>
     <div class="card"><h2>Run reconciliation <span class="sub">Uses records dated before the as-of date, like a daily close</span></h2>
       <div class="runform">
@@ -638,11 +756,11 @@ function pageSources() {
         <button class="btn primary" id="runbtn" ${s.data_ready ? "" : "disabled"}>Run reconciliation</button>
         ${s.data_ready ? "" : `<span class="muted">Sample files are missing. Run <code>python -m ledgerlens demo</code> first.</span>`}
       </div></div>
-    <div class="card"><h2>Reconcile your own data <span class="sub">Three CSVs. Column names are matched flexibly.</span></h2>
+    <div class="card"><h2>Reconcile your own data <span class="sub">One ledger, plus one or more gateway and bank files. Column names are matched flexibly.</span></h2>
       <div class="srcgrid" style="padding:0 8px;margin-bottom:12px">
-        ${[["ledger", "Internal ledger", "entry_id, order_ref, posted_at, type, amount, currency"], ["gateway", "Gateway settlement feed", "txn_id, merchant_ref, created, type, gross, fee, net, payout_id"], ["bank", "Bank settlement", "bank_ref, value_date, description, amount, currency"]]
+        ${[["ledger", "Internal ledger", "entry_id, order_ref, posted_at, type, amount, currency"], ["gateway", "Gateway feeds (one file per gateway)", "txn_id, merchant_ref, created, type, gross, fee, net, payout_id, gateway, customer"], ["bank", "Bank statements (one per account)", "bank_ref, value_date, description, amount, currency, account"]]
           .map(([k, l, cols]) => `<label class="drop" id="drop-${k}"><b>${l}</b><span class="muted" style="font-size:12px">${cols}</span>
-            <input type="file" accept=".csv,text/csv" data-up="${k}" style="font-size:12px"><a href="/templates/${k}.csv" download style="font-size:12px;color:var(--accent)">Download template</a></label>`).join("")}
+            <input type="file" accept=".csv,text/csv" data-up="${k}" ${k === "ledger" ? "" : "multiple"} style="font-size:12px"><a href="/templates/${k}.csv" download style="font-size:12px;color:var(--accent)">Download template</a></label>`).join("")}
       </div>
       <div class="runform"><label>As of<input type="date" id="upasof" value="${new Date().toISOString().slice(0, 10)}"></label>
         <button class="btn primary" id="upbtn" disabled>Reconcile uploaded files</button><span class="muted" id="upmsg">Choose all three files</span></div></div>
@@ -653,12 +771,13 @@ function pageSources() {
   $$("#seg button").forEach(b => b.onclick = () => { lsSet("ll_bank", b.dataset.v); $$("#seg button").forEach(x => x.classList.toggle("on", x === b)); });
   const files = {};
   $$("[data-up]").forEach(inp => inp.onchange = async () => {
-    const f = inp.files[0]; if (!f) return;
-    if (f.size > 5 * 1024 * 1024) { toast("Files must be under 5 MB"); inp.value = ""; return; }
-    files[inp.dataset.up] = await f.text();
+    const list = [...inp.files]; if (!list.length) return;
+    if (list.some(f => f.size > 5 * 1024 * 1024)) { toast("Files must be under 5 MB"); inp.value = ""; return; }
+    const parts = await Promise.all(list.map(async f => ({ name: f.name, text: await f.text() })));
+    files[inp.dataset.up] = inp.dataset.up === "ledger" ? parts[0].text : parts;
     $("#drop-" + inp.dataset.up).classList.add("ok");
     const n = Object.keys(files).length;
-    $("#upbtn").disabled = n < 3; $("#upmsg").textContent = n < 3 ? `${n} of 3 files chosen` : "Ready";
+    $("#upbtn").disabled = n < 3; $("#upmsg").textContent = n < 3 ? `${n} of 3 sources chosen` : "Ready";
   });
   $("#upbtn").onclick = async () => {
     const btn = $("#upbtn"); btn.disabled = true; btn.textContent = "Reconciling…";
@@ -701,7 +820,7 @@ async function route() {
       return;
     }
     if (page === "reports" && a) return await pageReport(a, b);
-    ({ queue: pageQueue, trace: pageTrace, payouts: pagePayouts, pipeline: pagePipeline, sources: pageSources, audit: pageAudit }[page] || pageReports)();
+    ({ queue: pageQueue, approvals: pageApprovals, disputes: pageDisputes, aging: pageAging, trace: pageTrace, payouts: pagePayouts, pipeline: pagePipeline, sources: pageSources, audit: pageAudit }[page] || pageReports)();
   } catch (e) { $("#page").innerHTML = `<div class="empty">Could not load: ${esc(e.message)}</div>`; }
 }
 window.addEventListener("hashchange", () => { S.q = ""; S.tab = "disc"; route(); window.scrollTo(0, 0); });

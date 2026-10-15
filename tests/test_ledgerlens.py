@@ -16,8 +16,8 @@ from ledgerlens.store import ActionError, Store
 
 
 def load(paths):
-    return (ingest.load_ledger(paths["ledger"]), ingest.load_gateway(paths["gateway"]),
-            ingest.load_bank(paths["bank"]))
+    return (ingest.load_ledger(paths["ledger"]), ingest.load_many(ingest.load_gateway, paths["gateway"]),
+            ingest.load_many(ingest.load_bank, paths["bank"]))
 
 
 class EngineTest(unittest.TestCase):
@@ -42,6 +42,9 @@ class EngineTest(unittest.TestCase):
             "UNIDENTIFIED_DEPOSIT:BNK-90417",
             # probabilistic candidate below auto-match threshold → both sides queued for review
             "MISSING_IN_GATEWAY:JE-5033", "MISSING_IN_LEDGER:ch_1032A",
+            # second gateway / bank: chargebacks, over-refund, settlement timing
+            "OVER_REFUND:3007", "UNRECORDED_CHARGEBACK:ps_cb_3007", "CHARGEBACK_OPEN:ps_cb_3007",
+            "CHARGEBACK_OPEN:ps_cb_3009", "DELAYED_SETTLEMENT:PS-STL-02", "PARTIAL_SETTLEMENT:PS-STL-04",
         }
         self.assertEqual(self.fps, expected)
 
@@ -53,6 +56,29 @@ class EngineTest(unittest.TestCase):
         statuses = {p.id: p.status for p in self.res.payouts}
         self.assertEqual(statuses["po_7Hq2F"], "in_transit")
         self.assertEqual(statuses["po_7Hq2B"], "settled")   # fuzzy-matched without payout id
+        for clean in ("3001", "3002", "3005", "3006", "3008"):  # split, consolidated, composite, partial refund, won
+            self.assertNotIn(clean, joined)
+
+    def test_advanced_matching_strategies(self):
+        by = {m.method: m for m in self.res.matches}
+        self.assertEqual(by["exact · many-to-one"].right, ["ps_txn_3001a", "ps_txn_3001b"])
+        self.assertEqual(len(by["aggregate · one-to-many"].left), 3)
+        self.assertEqual(by["composite"].right, ["ps_txn_3005"])
+        self.assertEqual(sorted(by["payout ids · one-to-many"].left), ["PS-STL-02", "PS-STL-03"])
+        self.assertEqual(by["payout id · many-to-one"].right, ["HB-1101", "HB-1102"])
+        for m in self.res.matches:   # explainable: factor contributions add up to the score
+            if m.method != "probabilistic":
+                self.assertAlmostEqual(sum(f["contribution"] for f in m.factors), m.confidence, delta=0.011)
+        po_b = next(m for m in self.res.matches if m.left == ["po_7Hq2B"])
+        self.assertLess(po_b.confidence, 1.0)
+
+    def test_disputes_and_settlement_analytics(self):
+        d = {x["id"]: x["status"] for x in self.res.disputes}
+        self.assertEqual(d, {"ps_cb_3007": "open", "ps_cb_3008": "won", "ps_cb_3009": "open"})
+        gws = {g["gateway"]: g for g in self.res.stats["settlement"]["by_gateway"]}
+        self.assertEqual(set(gws), {"NovaPay", "Paystream"})
+        self.assertEqual(gws["Paystream"]["partial"], 1)
+        self.assertEqual(len(self.res.stats["settlement"]["by_account"]), 2)
 
     def test_payout_mismatch_explains_gap(self):
         d = next(d for d in self.res.discrepancies if d.kind == "PAYOUT_AMOUNT_MISMATCH")
@@ -170,10 +196,10 @@ class SnapshotAndApiTest(unittest.TestCase):
         try:
             url = f"http://127.0.0.1:{httpd.server_port}/sim/bank/v1"
             via_api = load_bank_api(url)
-            via_csv = ingest.load_bank(self.paths["bank"])
-            key = lambda b: (b.id, b.value_date, b.amount, b.description)
+            via_csv = ingest.load_many(ingest.load_bank, self.paths["bank"])
+            key = lambda b: (b.id, b.value_date, b.amount, b.description, b.account)
             self.assertEqual(sorted(map(key, via_api)), sorted(map(key, via_csv)))
-            self.assertEqual(len(load_bank_api(url, dt.date(2026, 10, 9))), 2)
+            self.assertEqual(len(load_bank_api(url, dt.date(2026, 10, 9))), 4)
         finally:
             httpd.shutdown()
             httpd.server_close()
@@ -209,10 +235,13 @@ class DashboardApiTest(unittest.TestCase):
             return r.read().decode()
 
     def test_upload_bulk_and_export(self):
-        files = {k: open(self.paths[k]).read() for k in ("ledger", "gateway", "bank")}
+        from pathlib import Path
+        files = {"ledger": Path(self.paths["ledger"]).read_text(),
+                 **{k: [{"name": os.path.basename(p), "text": Path(p).read_text()} for p in self.paths[k]]
+                    for k in ("gateway", "bank")}}
         code, body = self.post("/api/upload", {"files": files, "as_of": "2026-10-15"})
         self.assertEqual(code, 200)
-        self.assertEqual(body["stats"]["discrepancies"], 15)
+        self.assertEqual(body["stats"]["discrepancies"], 21)
         code, body = self.post("/api/upload", {"files": {**files, "bank": "bank_ref,value_date,amount\nX,nope,1"}})
         self.assertEqual(code, 400)
         self.assertIn("bad date", body["error"])
@@ -223,6 +252,14 @@ class DashboardApiTest(unittest.TestCase):
         code, body = self.post("/api/exceptions/bulk",
                                {"fingerprints": fps, "action": "accept", "actor": "j", "note": "ok"})
         self.assertEqual(sorted(body["done"]), sorted(fps))
+        # high severity needs a second reviewer (maker-checker)
+        code, body = self.post("/api/exceptions/MISSING_SETTLEMENT:po_7Hq2E/actions",
+                               {"action": "approve", "actor": "j"})
+        self.assertEqual(code, 400)
+        self.assertIn("different reviewer", body["error"])
+        code, body = self.post("/api/exceptions/MISSING_SETTLEMENT:po_7Hq2E/actions",
+                               {"action": "approve", "actor": "k"})
+        self.assertEqual(body["status"], "accepted")
 
         csv_text = self.get("/api/export/exceptions.csv?status=accepted")
         self.assertEqual(len(csv_text.strip().splitlines()), 3)

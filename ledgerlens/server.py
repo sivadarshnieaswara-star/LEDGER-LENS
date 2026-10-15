@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
@@ -19,7 +20,13 @@ MAX_UPLOAD = 5 * 1024 * 1024   # per file
 
 
 def make_handler(db_path: str, data_dir: str, port: int):
-    paths = {k: os.path.join(data_dir, f"{k}.csv") for k in ("ledger", "gateway", "bank")}
+    import glob
+
+    def paths_now() -> dict:
+        """ledger.csv plus every gateway*.csv and bank*.csv in the data folder."""
+        return {"ledger": os.path.join(data_dir, "ledger.csv"),
+                "gateway": sorted(glob.glob(os.path.join(data_dir, "gateway*.csv"))),
+                "bank": sorted(glob.glob(os.path.join(data_dir, "bank*.csv")))}
     sim_url = f"http://127.0.0.1:{port}/sim/bank/v1"
 
     class Handler(BaseHTTPRequestHandler):
@@ -50,8 +57,9 @@ def make_handler(db_path: str, data_dir: str, port: int):
                 with open(os.path.join(STATIC, "index.html"), "rb") as fh:
                     return self._send(200, fh.read(), "text/html; charset=utf-8")
             if len(parts) == 2 and parts[0] == "templates" and parts[1] in ("ledger.csv", "gateway.csv", "bank.csv"):
-                p = paths[parts[1][:-4]]
-                if not os.path.exists(p):
+                found = paths_now()[parts[1][:-4]]
+                p = found if isinstance(found, str) else (found[-1] if found else "")
+                if not p or not os.path.exists(p):
                     return self._send(404, {"error": "run the demo first"})
                 with open(p, "rb") as fh:
                     return self._send(200, fh.read(), "text/csv; charset=utf-8",
@@ -59,7 +67,7 @@ def make_handler(db_path: str, data_dir: str, port: int):
             if parts == ["sim", "bank", "v1", "transactions"]:
                 try:
                     return self._send(200, bank_api.transactions(
-                        paths["bank"], qs.get("from"), qs.get("to"),
+                        paths_now()["bank"], qs.get("from"), qs.get("to"),
                         int(qs.get("cursor", 0)), min(200, int(qs.get("limit", 50)))))
                 except (ValueError, OSError) as exc:
                     return self._send(400, {"error": str(exc)})
@@ -72,8 +80,9 @@ def make_handler(db_path: str, data_dir: str, port: int):
                         "run": {k: v for k, v in run.items() if k != "traces"} if run else None,
                         "runs": store.runs(), "review": store.review_stats(),
                         "audit": {"ok": ok, "events": n, "message": msg},
-                        "sources": {**paths, "bank_api": sim_url},
-                        "data_ready": all(os.path.exists(p) for p in paths.values())})
+                        "sources": {**paths_now(), "bank_api": sim_url},
+                        "data_ready": os.path.exists(paths_now()["ledger"]) and bool(paths_now()["gateway"])
+                                      and bool(paths_now()["bank"])})
                 if parts == ["api", "reports"]:
                     return self._send(200, store.reports())
                 if len(parts) == 4 and parts[:2] == ["api", "reports"]:
@@ -147,8 +156,8 @@ def make_handler(db_path: str, data_dir: str, port: int):
             store = Store(db_path)
             try:
                 run_id, res = run_reconciliation(
-                    store, paths["ledger"], paths["gateway"],
-                    bank_path=None if use_api else paths["bank"], bank_api=sim_url if use_api else None,
+                    store, paths_now()["ledger"], paths_now()["gateway"],
+                    bank_path=None if use_api else paths_now()["bank"], bank_api=sim_url if use_api else None,
                     as_of=as_of, snapshot=bool(body.get("snapshot", True)),
                     label=str(body.get("label") or f"Manual run · {as_of:%d %b}"))
                 return self._send(200, {"run_id": run_id, "stats": res.stats})
@@ -161,23 +170,40 @@ def make_handler(db_path: str, data_dir: str, port: int):
         def _upload(self, body: dict):
             """Reconcile three user-supplied CSVs (sent as text)."""
             files = body.get("files") or {}
-            if set(files) != {"ledger", "gateway", "bank"}:
-                return self._send(400, {"error": "upload all three files: ledger, gateway and bank"})
-            if any(len(str(v).encode()) > MAX_UPLOAD for v in files.values()):
+            if set(files) != {"ledger", "gateway", "bank"} or not all(files.values()):
+                return self._send(400, {"error": "upload all three sources: ledger, gateway and bank"})
+            # gateway and bank may be several files: {"gateway": [{"name": .., "text": ..}, ..]}
+            norm = {}
+            for k, v in files.items():
+                items = v if isinstance(v, list) else [{"name": k, "text": v}]
+                if k == "ledger":
+                    items = items[:1]
+                norm[k] = [(str(i.get("name") or k), str(i.get("text") or "")) for i in items][:10]
+            if any(len(t.encode()) > MAX_UPLOAD for v in norm.values() for _, t in v):
                 return self._send(400, {"error": "each file must be under 5 MB"})
             stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
             folder = os.path.join(data_dir, "uploads", stamp)
             os.makedirs(folder, exist_ok=True)
-            up = {}
-            for k, text in files.items():
-                up[k] = os.path.join(folder, f"{k}.csv")
-                with open(up[k], "w", encoding="utf-8") as fh:
-                    fh.write(str(text))
+            up = {"gateway": [], "bank": []}
+            for k, items in norm.items():
+                for i, (name, text) in enumerate(items):
+                    stem = re.sub(r"[^a-z0-9]+", "_", os.path.splitext(name)[0].lower()).strip("_")
+                    if k != "ledger" and not stem.startswith(k):
+                        stem = f"{k}_{stem or i}"
+                    path = os.path.join(folder, "ledger.csv" if k == "ledger" else f"{stem}_{i}.csv")
+                    with open(path, "w", encoding="utf-8") as fh:
+                        fh.write(text)
+                    if k == "ledger":
+                        up["ledger"] = path
+                    else:
+                        up[k].append(path)
             try:   # fail fast with a readable message before touching the store
-                for k, fn in (("ledger", ingest.load_ledger), ("gateway", ingest.load_gateway),
-                              ("bank", ingest.load_bank)):
-                    if not fn(up[k]):
-                        raise ingest.IngestError(f"{k} file has no rows")
+                if not ingest.load_ledger(up["ledger"]):
+                    raise ingest.IngestError("ledger file has no rows")
+                for k, fn in (("gateway", ingest.load_gateway), ("bank", ingest.load_bank)):
+                    for path in up[k]:
+                        if not fn(path):
+                            raise ingest.IngestError(f"{os.path.basename(path)} has no rows")
             except (ingest.IngestError, ValueError, KeyError) as exc:
                 return self._send(400, {"error": f"could not read upload: {exc}"})
             try:

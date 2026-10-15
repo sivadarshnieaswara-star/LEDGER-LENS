@@ -10,11 +10,12 @@ class LedgerEntry:
     id: str
     ref: str
     ts: dt.datetime
-    kind: str            # "charge" | "refund"
+    kind: str            # "charge" | "refund" | "chargeback" | "chargeback_reversal"
     amount: int          # positive magnitude
     currency: str
     parent_ref: str = ""
     source_row: int = 0
+    customer: str = ""
 
 
 @dataclass
@@ -22,7 +23,7 @@ class GatewayEvent:
     id: str              # gateway transaction id
     ref: str             # merchant reference as the gateway reports it
     ts: dt.datetime
-    kind: str            # "charge" | "refund"
+    kind: str            # "charge" | "refund" | "chargeback" | "chargeback_reversal"
     gross: int           # positive magnitude
     fee: int             # positive magnitude
     net: int             # signed contribution to the payout
@@ -30,6 +31,8 @@ class GatewayEvent:
     payout_id: str = ""
     webhook_id: str = ""
     source_row: int = 0
+    gateway: str = "Gateway"
+    customer: str = ""
 
 
 @dataclass
@@ -40,6 +43,7 @@ class BankLine:
     currency: str
     description: str
     source_row: int = 0
+    account: str = "Bank"
 
 
 @dataclass
@@ -50,6 +54,7 @@ class Match:
     method: str
     confidence: float
     explanation: str
+    factors: list[dict] = field(default_factory=list)   # explainable confidence breakdown
 
 
 @dataclass
