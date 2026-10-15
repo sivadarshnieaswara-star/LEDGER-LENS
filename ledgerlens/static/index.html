@@ -372,6 +372,26 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 .cw-chips span { padding: 3px 9px; border-radius: 999px; background: var(--row); }
 @media (max-width: 1000px) { .live2 { grid-template-columns: 1fr; } .cw { height: 420px; } }
 @media (max-width: 560px) { .cw { height: 330px; --s: .55; } .cw-card { left: 0; transform-origin: 0 100%; } .live2-list { max-width: none; } }
+
+/* ================= Intro → dashboard: circuit-board transition ================= */
+.cb { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: var(--canvas); color: var(--ink);
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 16%, transparent) 1px, transparent 1.2px); background-size: 22px 22px;
+  animation: cbIn .25s ease both; }
+.cb.out { animation: cbOut .45s ease forwards; }
+@keyframes cbIn { from { opacity: 0; } } @keyframes cbOut { to { opacity: 0; transform: scale(1.04); filter: blur(4px); } }
+.cb svg { width: min(820px, 94vw); height: auto; overflow: visible; }
+.cb .tr { fill: none; stroke: color-mix(in srgb, var(--ink) 28%, transparent); stroke-width: 2; stroke-linejoin: round; }
+.cb .pl { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; filter: url(#cbGlow); }
+.cb .nd rect { fill: var(--panel); stroke: color-mix(in srgb, var(--ink) 30%, transparent); stroke-width: 1.5; transition: stroke .3s, fill .3s; }
+.cb .nd g.ic { color: color-mix(in srgb, var(--ink) 55%, transparent); transition: color .3s; }
+.cb .nd text { fill: var(--muted); font: 500 13px Figtree, sans-serif; text-anchor: middle; transition: fill .3s; }
+.cb .nd.on rect { stroke: var(--accent); fill: var(--accent-soft); }
+.cb .nd.on g.ic { color: var(--accent); }
+.cb .nd.on text { fill: var(--ink); }
+.cb .nd.on .halo { opacity: 1; }
+.cb .halo { fill: none; stroke: var(--accent); stroke-width: 1; opacity: 0; transition: opacity .3s; filter: url(#cbGlow); }
+.cb-cap { position: absolute; bottom: 12vh; left: 0; right: 0; text-align: center; font: 500 14px var(--mono); color: var(--muted); letter-spacing: .04em; }
+.cb-cap b { color: var(--accent); font-weight: 600; }
 /* ================= Magic bento (How it works) ================= */
 .bento { --glow: 240, 101, 47; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(220px, auto); gap: 12px; position: relative; }
 .bento-card { position: relative; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); padding: 20px 22px;
@@ -1430,6 +1450,71 @@ function mountCardSwap() {
   return () => { dead = true; clearInterval(timer); ro.disconnect(); };
 }
 let cwStop = () => {};
+
+/* ================= Intro → dashboard: circuit-board transition ================= */
+const CB_ICONS = {
+  ledger: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/>',
+  gateway: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/>',
+  bank: '<path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/>',
+  match: '<circle cx="8" cy="12" r="4"/><circle cx="16" cy="12" r="4"/>',
+  score: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  dash: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+};
+let cbBusy = false;
+function goDashboard(href) {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (cbBusy) return;
+  if (reduce) { location.hash = href; return; }
+  cbBusy = true;
+  const nodes = { L: [90, 70, "Ledger", "ledger"], G: [90, 170, "Gateways", "gateway"], B: [90, 270, "Bank", "bank"],
+                  M: [330, 100, "Match", "match"], S: [330, 240, "Score", "score"], D: [570, 170, "Dashboard", "dash"] };
+  // right-angled traces, grouped by the stage in which their pulse fires
+  const stages = [
+    [["L", "M110,70 H170 V170 H210"], ["G", "M110,170 H210"], ["B", "M110,270 H170 V170 H210"]],
+    [["M", "M210,170 V100 H310"], ["S", "M210,170 V240 H310"]],
+    [["D", "M350,100 H450 V170 H550"], ["D", "M350,240 H450 V170 H550"]],
+  ];
+  const node = (k, [x, y, label, ic]) => `<g class="nd" data-k="${k}" transform="translate(${x} ${y})">
+      <rect class="halo" x="-26" y="-26" width="52" height="52" rx="14"/>
+      <rect x="-20" y="-20" width="40" height="40" rx="10"/>
+      <g class="ic" transform="translate(-9 -9) scale(.75)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${CB_ICONS[ic]}</g>
+      <text y="40">${label}</text></g>`;
+  const el = document.createElement("div"); el.className = "cb"; el.setAttribute("role", "status");
+  el.innerHTML = `<svg viewBox="40 20 580 300" aria-hidden="true"><defs><filter id="cbGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    ${stages.flat().map(([, d]) => `<path class="tr" d="${d}"/>`).join("")}
+    ${stages.flat().map(([, d]) => `<path class="pl" d="${d}"/>`).join("")}
+    <circle cx="210" cy="170" r="3.5" fill="var(--accent)" opacity="0" class="jn"/>
+    ${Object.entries(nodes).map(([k, v]) => node(k, v)).join("")}</svg>
+    <div class="cb-cap">Reconciling <b>ledger · gateways · bank</b> → opening dashboard</div>`;
+  document.body.append(el);
+  const traces = [...el.querySelectorAll(".tr")], pulses = [...el.querySelectorAll(".pl")];
+  const lit = k => el.querySelector(`.nd[data-k="${k}"]`)?.classList.add("on");
+  traces.forEach(t => { const L = t.getTotalLength(); t.style.strokeDasharray = L; t.style.strokeDashoffset = L; });
+  pulses.forEach(p => { p.style.opacity = 0; });
+  ["L", "G", "B"].forEach((k, i) => setTimeout(() => lit(k), 60 + i * 70));
+  const STEP = 420; let idx = 0;
+  stages.forEach((group, si) => group.forEach(([target]) => {
+    const i = idx++, t = traces[i], p = pulses[i], L = t.getTotalLength(), delay = 200 + si * STEP;
+    t.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }], { duration: STEP, delay, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
+    const seg = Math.min(26, L * 0.35);
+    p.style.strokeDasharray = `${seg} ${L + seg}`;
+    p.animate([{ strokeDashoffset: seg, opacity: 1 }, { strokeDashoffset: -L, opacity: 1 }, { strokeDashoffset: -L, opacity: 0 }],
+      { duration: STEP + 120, delay: delay + 60, easing: "ease-in", fill: "forwards" });
+    setTimeout(() => lit(target), delay + STEP);
+    if (si === 0) setTimeout(() => el.querySelector(".jn").setAttribute("opacity", "1"), delay + STEP - 40);
+  }));
+  const done = 200 + stages.length * STEP + 260;
+  setTimeout(() => { location.hash = href; }, done);          // dashboard renders underneath
+  setTimeout(() => { el.classList.add("out"); }, done + 120);
+  setTimeout(() => { el.remove(); cbBusy = false; }, done + 600);
+}
+// any link on the intro page (or its feature dialog) that leads into the app goes through the circuit
+document.addEventListener("click", e => {
+  if ($("#landing").hidden || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  const a = e.target.closest('a[href^="#/"]'); if (!a) return;
+  const href = a.getAttribute("href"); if (href === "#/home" || href === "#/") return;
+  e.preventDefault(); a.closest(".fc-dialog")?.remove(); goDashboard(href);
+}, true);
 /* ================= Magic bento ================= */
 function bentoHTML(run, st, ing) {
   const det = run?.pipeline?.deterministic || {}, pr = run?.pipeline?.probabilistic || {};
@@ -1524,7 +1609,7 @@ function mountBento() {
     const go = (x, y) => {
       if (!reduce) { const r = c.getBoundingClientRect(), w = document.createElement("span"); const size = Math.hypot(r.width, r.height) * 2;
         w.className = "wave"; w.style.left = x + "px"; w.style.top = y + "px"; w.style.width = w.style.height = size + "px"; c.append(w); w.addEventListener("animationend", () => w.remove()); }
-      setTimeout(() => location.hash = c.dataset.href, reduce ? 0 : 320);
+      setTimeout(() => goDashboard(c.dataset.href), reduce ? 0 : 320);
     };
     c.addEventListener("click", e => { const r = c.getBoundingClientRect(); go(e.clientX - r.left, e.clientY - r.top); });
     c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(c.clientWidth / 2, c.clientHeight / 2); } });
