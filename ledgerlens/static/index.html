@@ -344,6 +344,34 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
   .oc-slide .cs-copy .btn { padding: 7px 10px; font-size: 12px; }
   .oc-pager button { padding: 6px 8px; font-size: 12px; }
 }
+
+/* ================= Live from the latest run: card swap ================= */
+.live2 { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 40px; align-items: center; }
+.live2-list { display: grid; gap: 6px; max-width: 420px; }
+.live2-list button { display: flex; align-items: center; gap: 10px; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 10px;
+  padding: 9px 12px; font: inherit; font-size: 14px; color: var(--ink-2); cursor: pointer; transition: border-color .2s, background .2s; }
+.live2-list button b { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--ink); }
+.live2-list button.on { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+.cw { position: relative; height: 470px; perspective: 1100px; outline: none; --s: 1; }
+.cw:focus-visible { box-shadow: 0 0 0 2px var(--accent); border-radius: 16px; }
+.cw-card { position: absolute; left: 6%; bottom: 8%; width: 430px; height: 300px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line);
+  box-shadow: 0 20px 50px rgba(0,0,0,.28); transform-origin: 50% 100%; display: flex; flex-direction: column; overflow: hidden; cursor: pointer;
+  will-change: transform, filter; touch-action: none; user-select: none; }
+.cw-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; font-weight: 600; font-size: 14px; border-bottom: 1px solid var(--line); background: var(--row); }
+.cw-open { margin-left: auto; color: var(--accent); font-size: 12.5px; text-decoration: none; font-weight: 600; }
+.cw-body { flex: 1; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.cw-big { font-size: 46px; font-weight: 700; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.cw-big small { font-size: 15px; color: var(--muted); font-weight: 500; letter-spacing: 0; margin-left: 8px; }
+.cw-rows { display: grid; gap: 7px; }
+.cw-row { display: grid; grid-template-columns: 150px 1fr 54px; gap: 10px; align-items: center; font-size: 12.5px; }
+.cw-row .t { height: 8px; border-radius: 4px; background: var(--row); overflow: hidden; } .cw-row .t i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+.cw-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.cw-stack { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--row); }
+.cw-stack i { display: block; height: 100%; }
+.cw-chips { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+.cw-chips span { padding: 3px 9px; border-radius: 999px; background: var(--row); }
+@media (max-width: 1000px) { .live2 { grid-template-columns: 1fr; } .cw { height: 420px; } }
+@media (max-width: 560px) { .cw { height: 330px; --s: .55; } .cw-card { left: 0; transform-origin: 0 100%; } .live2-list { max-width: none; } }
 /* ================= Magic bento (How it works) ================= */
 .bento { --glow: 240, 101, 47; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(220px, auto); gap: 12px; position: relative; }
 .bento-card { position: relative; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); padding: 20px 22px;
@@ -1296,6 +1324,112 @@ function mountCaseScenes() {
   return () => { dead = true; cancelAnimationFrame(raf); };
 }
 let csStop = () => {};
+
+/* ================= Live run panels as a card-swap stack ================= */
+function liveCards(run, st, active) {
+  const m = st.matches || {}, sev = st.by_severity || {}, d = st.disputes || {}, sett = st.settlement?.by_gateway || [];
+  const methods = Object.entries(m.by_method || {}).sort((a, b) => b[1] - a[1]).slice(0, 5), mx = Math.max(1, ...methods.map(x => x[1]));
+  const tot = (sev.high || 0) + (sev.medium || 0) + (sev.low || 0) || 1;
+  const kinds = {}; S.exceptions.filter(e => ["open", "investigating", "pending_approval"].includes(e.status) && !["DUPLICATE_WEBHOOK", "DELAYED_SETTLEMENT", "REFERENCE_MISMATCH", "CHARGEBACK_OPEN"].includes(e.kind))
+    .forEach(e => kinds[e.kind] = (kinds[e.kind] || 0) + Math.abs(e.amount_delta));
+  const topK = Object.entries(kinds).sort((a, b) => b[1] - a[1]).slice(0, 4), kmx = Math.max(1, ...topK.map(x => x[1]));
+  const dis = (run?.disputes || []).slice().sort((a, b) => a.days_left - b.days_left);
+  const row = (l, v, w, r) => `<div class="cw-row"><span>${l}</span><span class="t"><i style="width:${(w * 100).toFixed(1)}%"></i></span><b>${r}</b></div>`;
+  return [
+    { title: "Matches made", ico: "gateway", glyph: "⇄", href: `#/reports/${run?.id || 1}/ledger_gateway`, big: (m.exact || 0) + (m.fuzzy || 0),
+      body: `<div class="cw-big">${(m.exact || 0) + (m.fuzzy || 0)}<small>${Math.round((m.avg_confidence || 0) * 100)}% average confidence</small></div>
+        <div class="cw-rows">${methods.map(([k, v]) => row(esc(k), v, v / mx, v)).join("")}</div>` },
+    { title: "Active exceptions", ico: "bank", glyph: "!", href: "#/queue", big: active,
+      body: `<div class="cw-big">${active}<small>of ${st.discrepancies ?? 0} found this run</small></div>
+        <div class="cw-stack"><i style="flex:${sev.high || 0};background:var(--high)"></i><i style="flex:${sev.medium || 0};background:var(--med)"></i><i style="flex:${sev.low || 0};background:var(--low)"></i></div>
+        <div class="cw-chips"><span>● ${sev.high || 0} high</span><span>● ${sev.medium || 0} medium</span><span>● ${sev.low || 0} low</span></div>
+        <div class="muted" style="font-size:12.5px">${Math.round((sev.high || 0) / tot * 100)}% are high severity and need a second reviewer to close.</div>` },
+    { title: "Chargebacks", ico: "gateway", glyph: "↺", href: "#/disputes", big: d.open ?? 0,
+      body: `<div class="cw-big">${d.open ?? 0}<small>open · ${d.won ?? 0} won · ${d.expired ?? 0} expired</small></div>
+        <div class="cw-rows">${dis.slice(0, 3).map(x => `<div class="cw-row" style="grid-template-columns:1fr auto auto"><span>${esc(x.ref)} · ${esc(x.gateway)}</span><span class="badge2 ${x.status}">${x.status}</span><b style="min-width:70px">${x.status === "open" ? x.days_left + "d left" : "—"}</b></div>`).join("") || '<span class="muted">No disputes in this run.</span>'}</div>` },
+    { title: "Money at issue", ico: "ledger", glyph: "$", href: "#/queue", big: amt(st.exposure || 0).replace(" USD", ""),
+      body: `<div class="cw-big" style="font-size:38px">${amt(st.exposure || 0)}</div>
+        <div class="cw-rows">${topK.map(([k, v]) => row(esc(k.replace(/_/g, " ").toLowerCase()), v, v / kmx, (v / 100).toFixed(0))).join("")}</div>` },
+    { title: "Settlement timing", ico: "bank", glyph: "⏱", href: "#/aging", big: sett.length ? Math.round(sett.reduce((t, g) => t + g.on_time, 0) / Math.max(1, sett.reduce((t, g) => t + g.settled, 0)) * 100) + "%" : "–",
+      body: `<div class="cw-big">${sett.reduce((t, g) => t + g.settled, 0)}<small>payouts settled · ${sett.reduce((t, g) => t + g.missing, 0)} missing</small></div>
+        <div class="cw-rows">${sett.map(g => row(`${esc(g.gateway)} on time`, g.on_time, g.settled ? g.on_time / g.settled : 0, g.settled ? Math.round(g.on_time / g.settled * 100) + "%" : "–")).join("")}
+        ${sett.map(g => row(`${esc(g.gateway)} worst delay`, g.max_delay || 0, Math.min(1, (g.max_delay || 0) / 5), (g.max_delay ?? "–") + "d")).join("")}</div>` },
+  ];
+}
+
+function mountCardSwap() {
+  const root = $("#cw"); if (!root) return () => {};
+  const cards = $$(".cw-card", root), list = $$("#cw-list button"), n = cards.length;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const VIS = 4, DX = 58, DY = 64, DZ = 90, SKEW = 6, DELAY = 4000, DIM = 0.5;
+  let order = cards.map((_, i) => i), hover = false, spread = 0, timer = 0, busy = false, dead = false, px = 0, py = 0;
+  const scale = () => parseFloat(getComputedStyle(root).getPropertyValue("--s")) || 1;
+  function place(instant) {
+    const k = 1 + spread, sc = scale();
+    order.forEach((ci, slot) => {
+      const el = cards[ci], vis = slot < VIS;
+      el.style.transition = instant || reduce ? "none" : "transform .7s cubic-bezier(.34,1.45,.5,1), filter .5s, opacity .5s";
+      el.style.zIndex = String(n - slot);
+      el.style.transform = `scale(${sc}) translate3d(${slot * DX * k + px * (slot + 1) * 4}px, ${-slot * DY * k + py * (slot + 1) * 3}px, ${-slot * DZ}px) skewY(${SKEW}deg)`;
+      el.style.filter = `brightness(${1 - DIM * slot / VIS})`;
+      el.style.opacity = vis ? "1" : "0";
+      el.style.pointerEvents = vis ? "auto" : "none";
+      el.setAttribute("aria-hidden", slot === 0 ? "false" : "true");
+    });
+    list.forEach(b => b.classList.toggle("on", +b.dataset.i === order[0]));
+  }
+  function swap() {   // front card drops away, then rejoins at the back
+    if (busy || dead) return; busy = true;
+    const front = cards[order[0]], sc = scale();
+    front.style.transition = reduce ? "none" : "transform .45s cubic-bezier(.55,0,.8,.3)";
+    front.style.transform = `scale(${sc}) translate3d(0, 520px, 0) skewY(${SKEW}deg)`;
+    setTimeout(() => {
+      order = [...order.slice(1), order[0]];
+      place();
+      setTimeout(() => { busy = false; }, reduce ? 0 : 450);
+    }, reduce ? 0 : 420);
+  }
+  function bringToFront(ci) {
+    if (busy || order[0] === ci) return;
+    order = [ci, ...order.filter(x => x !== ci)]; place(); restart();
+  }
+  const restart = () => { clearInterval(timer); if (!reduce) timer = setInterval(() => { if (!hover && document.visibilityState === "visible") swap(); }, DELAY); };
+  root.addEventListener("mouseenter", () => { hover = true; spread = 0.12; place(); });
+  root.addEventListener("mouseleave", () => { hover = false; spread = 0; px = py = 0; place(); });
+  root.addEventListener("pointermove", e => {
+    if (drag) return;
+    const r = root.getBoundingClientRect(); px = (e.clientX - r.left) / r.width - .5; py = (e.clientY - r.top) / r.height - .5; place();
+  });
+  // drag or fling the front card to send it to the back; click a card behind to bring it forward
+  let drag = null;
+  cards.forEach((el, ci) => {
+    el.addEventListener("pointerdown", e => {
+      if (e.target.closest("a")) return;
+      if (order[0] !== ci) { bringToFront(ci); return; }
+      drag = { x: e.clientX, y: e.clientY, dx: 0, dy: 0 }; el.setPointerCapture(e.pointerId); el.style.transition = "none";
+    });
+    el.addEventListener("pointermove", e => {
+      if (!drag || order[0] !== ci) return;
+      drag.dx = e.clientX - drag.x; drag.dy = e.clientY - drag.y;
+      el.style.transform = `scale(${scale()}) translate3d(${drag.dx}px, ${drag.dy}px, 0) rotate(${drag.dx / 25}deg) skewY(${SKEW}deg)`;
+    });
+    const end = () => {
+      if (!drag) return;
+      const far = Math.hypot(drag.dx, drag.dy) > 90; drag = null;
+      if (far) { busy = false; swap(); restart(); } else place();
+    };
+    el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+  });
+  list.forEach(b => b.onclick = () => bringToFront(+b.dataset.i));
+  root.addEventListener("keydown", e => { if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); swap(); restart(); } });
+  // intro: fan out from the front card
+  order.forEach((ci, slot) => { const el = cards[ci]; el.style.transition = "none"; el.style.transform = `scale(${scale()}) translate3d(0, 0, 0) skewY(${SKEW}deg)`; el.style.opacity = slot < VIS ? "1" : "0"; });
+  requestAnimationFrame(() => requestAnimationFrame(() => place()));
+  const ro = new ResizeObserver(() => place(true)); ro.observe(root);
+  restart();
+  return () => { dead = true; clearInterval(timer); ro.disconnect(); };
+}
+let cwStop = () => {};
 /* ================= Magic bento ================= */
 function bentoHTML(run, st, ing) {
   const det = run?.pipeline?.deterministic || {}, pr = run?.pipeline?.probabilistic || {};
@@ -1830,14 +1964,19 @@ function pageLanding() {
   </div></section>
 
   <section class="l-sec" style="padding-top:20px"><div class="l-wrap">
-    <span class="eyebrow">Live from the latest run</span>
-    <h2>${run ? `Run #${run.id} · as of ${dayFmt(run.as_of)}` : "No runs yet"}</h2>
-    <p class="sub">${(ing.gateways || []).join(" + ") || "Gateways"} into ${(ing.bank_accounts || []).join(" + ") || "bank accounts"}.</p>
-    <div class="live">
-      <div class="kpi"><div class="l">Matches made</div><div class="v">${(st.matches?.exact || 0) + (st.matches?.fuzzy || 0)}</div><div class="s">${Object.keys(st.matches?.by_method || {}).length} matching methods used</div></div>
-      <div class="kpi"><div class="l">Active exceptions</div><div class="v">${active}</div><div class="s">${st.by_severity?.high || 0} high severity</div></div>
-      <div class="kpi"><div class="l">Open disputes</div><div class="v">${st.disputes?.open ?? 0}</div><div class="s">${st.disputes?.won ?? 0} won</div></div>
-      <div class="kpi"><div class="l">Money at issue</div><div class="v" style="font-size:22px">${amt(st.exposure || 0)}</div><div class="s">across all discrepancies</div></div>
+    <div class="live2">
+      <div class="live2-copy">
+        <span class="eyebrow">Live from the latest run</span>
+        <h2>${run ? `Run #${run.id} · as of ${dayFmt(run.as_of)}` : "No runs yet"}</h2>
+        <p class="sub">${(ing.gateways || []).join(" + ") || "Gateways"} into ${(ing.bank_accounts || []).join(" + ") || "bank accounts"}. These panels are read straight from the run, not mocked.</p>
+        <div class="live2-list" id="cw-list">${liveCards(run, st, active).map((c, i) => `<button data-i="${i}"><span class="ico ${c.ico}">${c.glyph}</span>${esc(c.title)}<b>${c.big}</b></button>`).join("")}</div>
+        <p class="muted" style="font-size:13px;margin-top:14px">The front card drops to the back every 4 seconds. Hover to pause, fling it away, or pick one from the list.</p>
+      </div>
+      <div class="cw" id="cw" tabindex="0" role="region" aria-roledescription="card stack" aria-label="Live run panels">
+        ${liveCards(run, st, active).map((c, i) => `<div class="cw-card" data-i="${i}" role="group" aria-label="${esc(c.title)}">
+          <div class="cw-head"><span class="ico ${c.ico}">${c.glyph}</span>${esc(c.title)}<a href="${c.href}" class="cw-open" aria-label="Open ${esc(c.title)}">Open →</a></div>
+          <div class="cw-body">${c.body}</div></div>`).join("")}
+      </div>
     </div>
   </div></section>
 
@@ -1883,6 +2022,7 @@ function pageLanding() {
   mountBento();
   lfStop(); lfStop = mountSunrise();
   csStop(); csStop = mountCaseScenes();
+  cwStop(); cwStop = mountCardSwap();
   if (!smooth) smooth = mountSmoothScroll();
   $$("[data-scroll]").forEach(a => a.onclick = e => { e.preventDefault(); const el = document.querySelector(a.getAttribute("href")); if (!el) return;
     const y = el.getBoundingClientRect().top + scrollY - 70; smooth ? smooth.scrollTo(y) : el.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
@@ -1893,7 +2033,7 @@ async function route() {
   const [page, a, b] = location.hash.slice(2).split("/");
   const landing = !page || page === "home";
   $("#landing").hidden = !landing; $("#app").hidden = landing;
-  if (!landing) { fcInst?.destroy(); fcInst = null; lfStop(); csStop(); smooth?.destroy(); smooth = null; }
+  if (!landing) { fcInst?.destroy(); fcInst = null; lfStop(); csStop(); cwStop(); smooth?.destroy(); smooth = null; }
   if (landing) { document.title = "LedgerLens · Intelligent payment reconciliation"; return pageLanding(); }
   document.title = "LedgerLens";
   renderNav();
