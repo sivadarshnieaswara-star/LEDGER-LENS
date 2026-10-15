@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "echo 'standard library only, nothing to install'",
+  "buildCommand": "python3 -m ledgerlens export-static --out site",
+  "outputDirectory": "site"
+}
