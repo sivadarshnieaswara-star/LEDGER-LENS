@@ -233,6 +233,36 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
   .fc-body { min-width: 0; padding: 24px 20px; }
   .fc-body h3 { font-size: 22px; }
 }
+
+/* FlexCarousel */
+.flexc { position: relative; height: 620px; outline: none; cursor: grab; touch-action: pan-y; user-select: none;
+  margin: 0 calc(50% - 50vw); width: 100vw; overflow: hidden; }
+.flexc.grabbing { cursor: grabbing; }
+.flexc:focus-visible { box-shadow: inset 0 0 0 3px var(--accent); }
+.flexc-gl { position: absolute; inset: 0; display: block; }
+.flexc-cap { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; pointer-events: none; }
+.flexc-title { font-weight: 600; font-size: 18px; letter-spacing: -.01em; }
+.flexc-count { color: var(--muted); font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; letter-spacing: .08em; }
+.flexc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 80%, transparent); backdrop-filter: blur(8px); cursor: pointer; font-size: 20px; z-index: 2; opacity: 0; transition: opacity .2s; }
+.flexc:hover .flexc-nav, .flexc:focus-within .flexc-nav { opacity: 1; }
+.flexc-nav.prev { left: max(16px, calc(50vw - 600px)); } .flexc-nav.next { right: max(16px, calc(50vw - 600px)); }
+.flexc-fallback .flexc-row { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 20px 24px 80px; height: 100%; }
+.flexc-fallback .flexc-card { height: 100%; width: auto; border-radius: 18px; scroll-snap-align: center; flex: none; cursor: pointer; }
+.fc-dialog { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(10,10,12,.55); backdrop-filter: blur(6px); animation: fadein .25s; }
+.fc-dialog .box { width: min(640px, 100%); max-height: calc(100vh - 32px); overflow: auto; border-radius: 20px; color: #fff; background: var(--g); box-shadow: 0 30px 80px rgba(0,0,0,.4); animation: pop .35s cubic-bezier(.2,.9,.3,1.2); }
+.fc-dialog .inner { padding: 32px; }
+.fc-dialog h3 { font-size: 30px; margin: 16px 0 10px; letter-spacing: -.02em; }
+.fc-dialog p { font-size: 16px; line-height: 1.6; opacity: .92; margin: 0; }
+.fc-dialog ul { margin: 18px 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+.fc-dialog li::before { content: "→ "; opacity: .7; }
+.fc-dialog .ic { width: 52px; height: 52px; border-radius: 14px; background: rgba(255,255,255,.18); display: grid; place-items: center; }
+.fc-dialog .ic svg { width: 26px; height: 26px; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.fc-dialog .demo { background: rgba(0,0,0,.22); border-radius: 12px; padding: 14px 16px; display: flex; gap: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.fc-dialog .demo a { background: #fff; color: #111; padding: 9px 14px; border-radius: 9px; font-weight: 600; text-decoration: none; }
+.fc-dialog .x { background: rgba(255,255,255,.18); color: #fff; float: right; }
+@keyframes fadein { from { opacity: 0; } } @keyframes pop { from { opacity: 0; transform: scale(.92) translateY(10px); } }
+@media (max-width: 960px) { .flexc { height: 520px; } }
 @media (prefers-reduced-motion: reduce) { .fc-panel, .fc-body, .hc-row, .hc-result { transition: none; animation: none; } }
 @media (max-width: 900px) { .buckets { grid-template-columns: 1fr 1fr; } .frow { grid-template-columns: 110px 1fr 44px; } }
 @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } .kbar { grid-template-columns: 110px 1fr 28px; } }
@@ -962,7 +992,240 @@ const LANDING_SCEN = [
   ["PS-STL-02+03", "One batched deposit settles two Paystream payouts.", "#/payouts"],
   ["ORD-3008", "Chargeback won: the reversal is matched on both sides, so no exception.", "#/disputes"],
 ];
-let fcTimer = null;
+let fcInst = null;
+/* ================= FlexCarousel =================
+   An infinite card row that flows through an invisible "liquid glass" lens:
+   cards inside the lens stay flat; past its edge the row curls (left end
+   down, right end up), stretches and splits light into RGB. WebGL mesh
+   deformation; original implementation, no dependencies. */
+function hexPair(g) { const m = g.match(/#[0-9a-f]{6}/gi) || ["#333333", "#111111"]; return [m[0], m[1] || m[0]]; }
+function wrapText(ctx, text, maxW) {
+  const words = String(text).split(/\s+/), lines = []; let line = "";
+  for (const w of words) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line); return lines;
+}
+function svgImage(markup) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(img); img.onerror = () => res(null);
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="96" height="96" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${markup}</svg>`);
+  });
+}
+async function drawCard(f, i, n) {
+  const W = 720, H = 960, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d"), [a, b] = hexPair(f.g);
+  const grd = x.createLinearGradient(0, 0, W, H); grd.addColorStop(0, a); grd.addColorStop(1, b);
+  x.fillStyle = grd; x.fillRect(0, 0, W, H);
+  // soft light blobs for depth
+  for (const [cx, cy, r, al] of [[W * .85, H * .12, 360, .18], [W * .1, H * .95, 420, .14], [W * .6, H * .55, 260, .07]]) {
+    const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, `rgba(255,255,255,${al})`); rg.addColorStop(1, "rgba(255,255,255,0)");
+    x.fillStyle = rg; x.fillRect(0, 0, W, H);
+  }
+  const font = (w, s) => `${w} ${s}px Figtree, -apple-system, "Segoe UI", sans-serif`;
+  x.fillStyle = "rgba(255,255,255,.75)"; x.font = font(700, 26); x.fillText(String(i + 1).padStart(2, "0") + " / " + String(n).padStart(2, "0"), 56, 84);
+  x.textAlign = "right"; x.fillText("LEDGERLENS", W - 56, 84); x.textAlign = "left";
+  x.fillStyle = "rgba(255,255,255,.16)"; x.beginPath(); x.roundRect(56, 130, 120, 120, 28); x.fill();
+  const icon = await svgImage(ICON[f.i] || ""); if (icon) x.drawImage(icon, 80, 154, 72, 72);
+  x.fillStyle = "#fff"; x.font = font(700, 62);
+  let y = 340; for (const l of wrapText(x, f.t, W - 112).slice(0, 3)) { x.fillText(l, 56, y); y += 70; }
+  x.font = font(400, 29); x.fillStyle = "rgba(255,255,255,.9)"; y += 10;
+  for (const l of wrapText(x, f.d, W - 112).slice(0, 4)) { x.fillText(l, 56, y); y += 42; }
+  x.font = font(500, 25); x.fillStyle = "rgba(255,255,255,.82)"; y += 18;
+  for (const bl of f.b.slice(0, 4)) { const ls = wrapText(x, "→  " + bl, W - 112).slice(0, 2); for (const l of ls) { if (y > H - 130) break; x.fillText(l, 56, y); y += 34; } y += 6; }
+  x.fillStyle = "rgba(0,0,0,.22)"; x.beginPath(); x.roundRect(40, H - 112, W - 80, 72, 18); x.fill();
+  x.fillStyle = "#fff"; x.font = font(600, 26); x.fillText("Click to explore  →", 72, H - 66);
+  return c;
+}
+
+const FC_VS = `attribute vec2 a_uv;
+uniform vec2 u_res; uniform float u_cx; uniform vec2 u_size; uniform float u_lens; uniform float u_reach;
+uniform float u_bend; uniform float u_scale; uniform float u_rise; uniform float u_open;
+varying vec2 v_uv; varying float v_bend;
+void main() {
+  vec2 p = vec2(u_cx + (a_uv.x - 0.5) * u_size.x, (0.5 - a_uv.y) * u_size.y) * u_scale;
+  float ax = abs(p.x), s = sign(p.x);
+  float t = clamp((ax - u_lens) / u_reach, 0.0, 1.0);
+  float f = t * t * (3.0 - 2.0 * t) * (1.0 - u_open);
+  float beyond = max(ax - u_lens - u_reach, 0.0) / u_reach * (1.0 - u_open);
+  float k = f + beyond * 0.55;
+  p.y *= 1.0 + 0.32 * k;                         // glass magnifies toward its rim
+  p.y += s * u_bend * k;                         // twist: left end down, right end up
+  p.x = s * (min(ax, u_lens) + max(ax - u_lens, 0.0) * (1.0 - 0.28 * f));   // compress past the rim
+  p.y += u_rise;
+  gl_Position = vec4(p / (u_res * 0.5), 0.0, 1.0);
+  v_uv = a_uv; v_bend = clamp(k, 0.0, 1.5);
+}`;
+const FC_FS = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform sampler2D u_tex; uniform vec2 u_size; uniform float u_radius; uniform float u_disp; uniform float u_alpha;
+varying vec2 v_uv; varying float v_bend;
+void main() {
+  vec2 o = vec2(u_disp * v_bend * 0.014, u_disp * v_bend * 0.004);
+  vec3 col = vec3(texture2D(u_tex, v_uv + o).r, texture2D(u_tex, v_uv).g, texture2D(u_tex, v_uv - o).b);
+  col *= 1.0 - 0.18 * min(v_bend, 1.0);
+  vec2 q = abs(v_uv - 0.5) * u_size - (u_size * 0.5 - u_radius);
+  float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_radius;
+  float a = (1.0 - smoothstep(-1.0, 1.0, d)) * u_alpha;
+  gl_FragColor = vec4(col * a, a);
+}`;
+
+function FlexCarousel(root, items, opts = {}) {
+  const o = Object.assign({ cardHeight: 0.66, gap: 16, radius: 18, lens: 0.36, reach: 0.2, bend: 0.16, dispersion: 1,
+    squeeze: 0.18, autoplay: true, interval: 4, onSelect: () => {}, onChange: () => {} }, opts);
+  const n = items.length;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  root.classList.add("flexc"); root.tabIndex = 0; root.setAttribute("role", "region");
+  root.setAttribute("aria-roledescription", "carousel"); root.setAttribute("aria-label", opts.label || "Carousel");
+  root.innerHTML = `<canvas class="flexc-gl" aria-hidden="true"></canvas>
+    <div class="flexc-cap"><div class="flexc-title" aria-live="polite"></div><div class="flexc-count"></div></div>
+    <button class="flexc-nav prev" aria-label="Previous">‹</button><button class="flexc-nav next" aria-label="Next">›</button>`;
+  const canvas = root.querySelector("canvas"), titleEl = root.querySelector(".flexc-title"), countEl = root.querySelector(".flexc-count");
+  const gl = canvas.getContext("webgl", { premultipliedAlpha: true, antialias: true, alpha: true });
+  let destroyed = false, raf = 0, timer = 0;
+
+  // ---------- state
+  let W = 0, H = 0, cw = 0, ch = 0, step = 1;
+  let pos = 0, target = 0, vel = 0, last = 0, hover = false, dragging = false, downX = 0, downPos = 0, moved = 0;
+  let introStart = 0, introT = reduce ? 1 : 0, openT = 0, current = -1, wheelTimer = 0;
+  const idxAt = p => ((Math.round(p / step) % n) + n) % n;
+  const snap = p => Math.round(p / step) * step;
+
+  function layout() {
+    const r = root.getBoundingClientRect(); W = r.width; H = r.height;
+    ch = Math.min(H * o.cardHeight, 560); cw = ch * 0.75; step = cw + o.gap;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
+    pos = snap(pos); target = pos;
+  }
+  const ro = new ResizeObserver(layout); ro.observe(root);
+
+  // ---------- fallback (no WebGL): native scroll-snap row of the same cards
+  if (!gl) {
+    root.classList.add("flexc-fallback");
+    Promise.all(items.map((f, i) => drawCard(f, i, n))).then(cs => {
+      const row = document.createElement("div"); row.className = "flexc-row";
+      cs.forEach((c, i) => { c.className = "flexc-card"; c.onclick = () => o.onSelect(i); row.append(c); });
+      root.prepend(row); setCaption(0);
+    });
+    function setCaption(i) { titleEl.textContent = items[i].t; countEl.textContent = `${String(i + 1).padStart(2, "0")} / ${String(n).padStart(2, "0")}`; }
+    return { destroy() { ro.disconnect(); } };
+  }
+
+  // ---------- GL setup
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, FC_VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FC_FS)); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) console.warn("FlexCarousel: shader link failed", gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  const SEG = 28, uv = [], idx = [];
+  for (let y = 0; y <= SEG; y++) for (let x = 0; x <= SEG; x++) uv.push(x / SEG, y / SEG);
+  for (let y = 0; y < SEG; y++) for (let x = 0; x < SEG; x++) { const a = y * (SEG + 1) + x, b = a + 1, c = a + SEG + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uv), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, "a_uv"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+  const U = {}; for (const k of ["u_res", "u_cx", "u_size", "u_lens", "u_reach", "u_bend", "u_scale", "u_rise", "u_open", "u_tex", "u_radius", "u_disp", "u_alpha"]) U[k] = gl.getUniformLocation(prog, k);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  const textures = new Array(n).fill(null);
+  items.forEach((f, i) => drawCard(f, i, n).then(c => {
+    if (destroyed) return;
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    textures[i] = t;
+  }));
+
+  // ---------- render loop
+  const ease = t => 1 - Math.pow(1 - Math.min(Math.max(t, 0), 1), 3);
+  function frame(now) {
+    if (destroyed) return;
+    const dt = Math.min(0.25, (now - (last || now)) / 1000); last = now;
+    if (!dragging) pos += (target - pos) * (1 - Math.pow(0.0009, dt));
+    const speed = Math.abs(pos - (frame.prev ?? pos)) / Math.max(dt, 1 / 120); frame.prev = pos;
+    vel += (Math.min(speed / 2200, 1) - vel) * 0.15;
+    if (introT < 1) { introStart = introStart || now; introT = Math.min(1, (now - introStart) / 1400); }
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(U.u_res, W, H); gl.uniform2f(U.u_size, cw, ch);
+    gl.uniform1f(U.u_lens, W * o.lens); gl.uniform1f(U.u_reach, W * o.reach);
+    gl.uniform1f(U.u_bend, H * o.bend); gl.uniform1f(U.u_radius, o.radius); gl.uniform1f(U.u_disp, o.dispersion);
+    gl.uniform1f(U.u_open, 0);
+    const L = n * step, centerIdx = Math.round(pos / step);
+    const draws = [];
+    for (let k = -Math.ceil(W / step) - 2; k <= Math.ceil(W / step) + 2; k++) {
+      const i = centerIdx + k, cx = i * step - pos, item = ((i % n) + n) % n;
+      draws.push({ cx, item, rank: Math.abs(k) });
+    }
+    draws.sort((a, b) => b.rank - a.rank);   // centre card drawn last, on top
+    for (const d of draws) {
+      if (!textures[d.item]) continue;
+      const delay = d.rank * 0.07, ti = reduce ? 1 : ease((introT * 1.4 - delay) / 0.9);
+      const isCenter = d.rank === 0;
+      const scale = (1 - o.squeeze * vel) * (isCenter ? 1 + 0.06 * openT : 1 - 0.04 * openT);
+      const part = openT * Math.sign(d.cx) * cw * 0.35;   // others part when the centre card opens
+      gl.uniform1f(U.u_cx, d.cx + part);
+      gl.uniform1f(U.u_scale, scale);
+      gl.uniform1f(U.u_rise, -(1 - ti) * H * 0.9);
+      gl.uniform1f(U.u_alpha, ti * (isCenter ? 1 : 1 - 0.55 * openT));
+      gl.uniform1f(U.u_open, isCenter ? openT : openT * 0.6);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, textures[d.item]); gl.uniform1i(U.u_tex, 0);
+      gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0);
+    }
+    const ci = idxAt(target);
+    if (ci !== current) { current = ci; titleEl.textContent = items[ci].t; countEl.textContent = `${String(ci + 1).padStart(2, "0")} / ${String(n).padStart(2, "0")}`; o.onChange(ci); }
+    raf = requestAnimationFrame(frame);
+  }
+
+  // ---------- interaction
+  const go = d => { target = snap(target) + d * step; restart(); };
+  function restart() { clearInterval(timer); if (o.autoplay && !reduce) timer = setInterval(() => { if (!hover && !dragging && document.activeElement !== root) go(1); }, o.interval * 1000); }
+  canvas.addEventListener("pointerdown", e => { dragging = true; moved = 0; downX = e.clientX; downPos = pos; canvas.setPointerCapture(e.pointerId); root.classList.add("grabbing"); });
+  canvas.addEventListener("pointermove", e => { if (!dragging) return; const dx = e.clientX - downX; moved = Math.max(moved, Math.abs(dx)); pos = downPos - dx; target = pos; });
+  const up = e => {
+    if (!dragging) return; dragging = false; root.classList.remove("grabbing");
+    if (moved < 6) {   // a click: centre card opens, any other card comes to the centre
+      const r = root.getBoundingClientRect(), off = Math.round((e.clientX - r.left - W / 2) / step);
+      if (off === 0) o.onSelect(idxAt(target)); else go(off);
+    } else { const fling = (pos - downPos) * 0.35; target = snap(pos + fling); restart(); }
+  };
+  canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
+  root.addEventListener("wheel", e => {
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : (o.captureWheel === false ? 0 : e.deltaY);
+    if (!d) return; e.preventDefault(); target += d; clearTimeout(wheelTimer); wheelTimer = setTimeout(() => { target = snap(target); }, 140); restart();
+  }, { passive: false });
+  root.addEventListener("mouseenter", () => hover = true); root.addEventListener("mouseleave", () => hover = false);
+  root.addEventListener("keydown", e => {
+    if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); o.onSelect(idxAt(target)); }
+  });
+  root.querySelector(".prev").onclick = () => go(-1); root.querySelector(".next").onclick = () => go(1);
+  layout(); restart(); raf = requestAnimationFrame(frame);
+  return {
+    setOpen(v) { const to = v ? 1 : 0; const t0 = performance.now(), from = openT; const tick = now => { openT = from + (to - from) * ease((now - t0) / 380); if (now - t0 < 380 && !destroyed) requestAnimationFrame(tick); }; requestAnimationFrame(tick); },
+    go, destroy() { destroyed = true; cancelAnimationFrame(raf); clearInterval(timer); ro.disconnect(); },
+  };
+}
+
+function openFeature(i, lastRun) {
+  const f = FEATURES[i];
+  fcInst?.setOpen(true);
+  const d = document.createElement("div"); d.className = "fc-dialog";
+  d.innerHTML = `<div class="box" style="--g:${f.g}" role="dialog" aria-modal="true" aria-label="${esc(f.t)}"><div class="inner">
+    <button class="x" aria-label="Close">×</button><div class="ic">${svgI(f.i)}</div>
+    <span style="opacity:.75;font-weight:600;font-size:13px">${String(i + 1).padStart(2, "0")} / ${FEATURES.length}</span>
+    <h3>${esc(f.t)}</h3><p>${esc(f.d)}</p><ul>${f.b.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    <div class="demo"><span>${esc(f.demo[0])}</span><a href="${f.demo[1].replace("LAST", lastRun)}">See it live →</a></div></div></div>`;
+  const close = () => { d.remove(); fcInst?.setOpen(false); document.removeEventListener("keydown", esc_); $("#flexc")?.focus(); };
+  const esc_ = e => { if (e.key === "Escape") close(); };
+  d.onclick = e => { if (e.target === d || e.target.closest(".x") || e.target.closest("a")) close(); };
+  document.addEventListener("keydown", esc_);
+  document.body.append(d); d.querySelector(".x").focus();
+}
 
 function pageLanding() {
   const run = S.summary?.run, st = run?.stats || {}, ing = run?.pipeline?.ingestion || {};
@@ -1020,17 +1283,8 @@ function pageLanding() {
   <section class="l-sec" id="l-features" style="padding-top:20px"><div class="l-wrap">
     <span class="eyebrow">Features</span>
     <h2>Ten capabilities, one engine.</h2>
-    <p class="sub">Hover or tap a panel to expand it. Each one links to a real example in the demo data.</p>
-    <div class="fc" id="fc" role="tablist" aria-label="Features">
-      ${FEATURES.map((f, i) => `<div class="fc-panel ${i === 0 ? "on" : ""}" style="--g:${f.g}" data-i="${i}" role="tab" tabindex="0" aria-selected="${i === 0}" aria-label="${esc(f.t)}">
-        <span class="num">${String(i + 1).padStart(2, "0")}</span><span class="vt">${esc(f.t)}</span>
-        <div class="fc-body"><div><div class="ic">${svgI(f.i)}</div><h3>${esc(f.t)}</h3><p>${esc(f.d)}</p><ul>${f.b.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div><div></div>
-          <div class="fc-demo"><span>${esc(f.demo[0])}</span><a href="${f.demo[1].replace("LAST", lastRun)}">See it live →</a></div></div>
-      </div>`).join("")}
-    </div>
-    <div class="fc-ctrl"><button class="fc-arrow" data-dir="-1" aria-label="Previous feature">‹</button>
-      <div class="fc-dots">${FEATURES.map((f, i) => `<button class="${i === 0 ? "on" : ""}" data-dot="${i}" aria-label="${esc(f.t)}"></button>`).join("")}</div>
-      <span class="fc-count" id="fccount">01 / ${N}</span><button class="fc-arrow" data-dir="1" aria-label="Next feature">›</button></div>
+    <p class="sub">Drag, scroll or use the arrow keys. The row flows through an invisible lens and curls at its edges. Click the centre card to open it.</p>
+    <div id="flexc"></div>
   </div></section>
 
   <section class="l-sec" id="l-how"><div class="l-wrap">
@@ -1075,36 +1329,10 @@ function pageLanding() {
   </div></section>
   <footer class="l-foot"><div class="l-wrap" style="display:flex;gap:16px;flex-wrap:wrap"><span>LedgerLens: intelligent payment reconciliation</span><span style="flex:1"></span><span>Keyboard: <kbd>r</kbd> reports · <kbd>q</kbd> queue · <kbd>/</kbd> search</span></div></footer>`;
 
-  // ---- flex carousel behaviour
-  const fc = $("#fc"), panels = $$(".fc-panel", fc), dots = $$("[data-dot]");
-  const DUR = 6000;
-  document.documentElement.style.setProperty("--dur", DUR + "ms");
-  let cur = 0;
-  const show = i => {
-    cur = (i + N) % N;
-    panels.forEach((p, k) => { p.classList.toggle("on", k === cur); p.setAttribute("aria-selected", k === cur); });
-    dots.forEach((d, k) => { d.classList.remove("on"); if (k === cur) { void d.offsetWidth; d.classList.add("on"); } });
-    $("#fccount").textContent = `${String(cur + 1).padStart(2, "0")} / ${N}`;
-  };
+  // ---- flex carousel
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const start = () => { clearInterval(fcTimer); if (!reduce) fcTimer = setInterval(() => show(cur + 1), DUR); };
-  const stop = () => { clearInterval(fcTimer); fc.classList.add("paused"); };
-  panels.forEach((p, i) => {
-    p.addEventListener("click", e => { if (e.target.closest("a")) return; show(i); start(); });
-    p.addEventListener("mouseenter", () => { if (matchMedia("(hover: hover)").matches) { show(i); stop(); } });
-    p.addEventListener("keydown", e => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(i); }
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); show(cur + 1); panels[cur].focus(); }
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); show(cur - 1); panels[cur].focus(); }
-    });
-  });
-  fc.addEventListener("mouseleave", () => { fc.classList.remove("paused"); start(); });
-  let tx = null;
-  fc.addEventListener("touchstart", e => { tx = e.touches[0].clientX; stop(); }, { passive: true });
-  fc.addEventListener("touchend", e => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1)); tx = null; fc.classList.remove("paused"); start(); });
-  dots.forEach(d => d.onclick = () => { show(+d.dataset.dot); start(); });
-  $$(".fc-arrow").forEach(b => b.onclick = () => { show(cur + +b.dataset.dir); start(); });
-  show(0); start();
+  fcInst?.destroy();
+  fcInst = FlexCarousel($("#flexc"), FEATURES, { label: "LedgerLens features", onSelect: i => openFeature(i, lastRun) });
 
   $$("[data-scroll]").forEach(a => a.onclick = e => { e.preventDefault(); document.querySelector(a.getAttribute("href"))?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
   $("#ltheme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
@@ -1114,7 +1342,7 @@ async function route() {
   const [page, a, b] = location.hash.slice(2).split("/");
   const landing = !page || page === "home";
   $("#landing").hidden = !landing; $("#app").hidden = landing;
-  clearInterval(fcTimer);
+  if (!landing) { fcInst?.destroy(); fcInst = null; }
   if (landing) { document.title = "LedgerLens · Intelligent payment reconciliation"; return pageLanding(); }
   document.title = "LedgerLens";
   renderNav();
