@@ -264,6 +264,33 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 @keyframes fadein { from { opacity: 0; } } @keyframes pop { from { opacity: 0; transform: scale(.92) translateY(10px); } }
 @media (max-width: 960px) { .flexc { height: 360px; } }
 
+
+/* ================= Hero light field ================= */
+.l-hero2 { padding: 72px 0 24px; text-align: center; overflow: hidden; }
+.l-hero2-copy h1 { font-size: clamp(36px, 5.6vw, 66px); line-height: 1.03; letter-spacing: -.035em; margin: 18px auto; font-weight: 700; max-width: 900px; }
+.l-hero2-copy h1 em { font-style: normal; color: var(--accent); }
+.l-hero2-copy .lead { font-size: 18px; line-height: 1.55; color: var(--ink-2); margin: 0 auto 28px; max-width: 640px; }
+.l-hero2-copy .cta { justify-content: center; }
+.lf { position: relative; max-width: 1200px; margin: 30px auto 0; }
+.lf-canvas { display: block; width: 100%; height: 260px; }
+.lf-stages { display: grid; grid-template-columns: repeat(3, 1fr); position: relative; margin-top: -130px; padding: 0 2%; }
+.lf-stage { position: relative; padding-top: 140px; text-align: center; }
+.lf-stem { position: absolute; top: 0; left: 50%; width: 1.5px; height: 128px; translate: -.75px 0; background: color-mix(in srgb, var(--ink) 22%, transparent); transition: background .4s; }
+.lf-stem::before { content: ""; position: absolute; top: -4px; left: 50%; width: 9px; height: 9px; border-radius: 50%; translate: -50% 0; background: color-mix(in srgb, var(--ink) 45%, transparent); transition: background .4s, box-shadow .4s; }
+.lf-label { color: var(--muted); font-size: 15px; margin-bottom: 6px; }
+.lf-value { font-size: clamp(34px, 4.6vw, 58px); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; transition: color .4s; }
+.lf-value small { font-size: .42em; font-weight: 600; margin-left: 6px; letter-spacing: 0; color: var(--muted); }
+.lf-stage p { color: var(--muted); font-size: 15px; line-height: 1.5; max-width: 260px; margin: 12px auto 0; }
+.lf-stage.on .lf-stem { background: var(--accent); }
+.lf-stage.on .lf-stem::before { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.lf-stage.on .lf-value { color: var(--accent); }
+@media (max-width: 760px) {
+  .l-hero2 { padding-top: 40px; }
+  .lf-canvas { height: 180px; }
+  .lf-stages { margin-top: -90px; }
+  .lf-stage { padding-top: 100px; } .lf-stem { height: 88px; }
+  .lf-stage p { font-size: 12.5px; padding: 0 4px; } .lf-label { font-size: 13px; }
+}
 /* ================= Magic bento (How it works) ================= */
 .bento { --glow: 240, 101, 47; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(220px, auto); gap: 12px; position: relative; }
 .bento-card { position: relative; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); padding: 20px 22px;
@@ -1028,6 +1055,67 @@ async function pageAudit() {
 
 
 
+
+/* ================= Hero light field ================= */
+function mountLightField() {
+  const root = $("#lf"); if (!root) return () => {};
+  const cv = $(".lf-canvas", root), ctx = cv.getContext("2d"), stages = $$(".lf-stage", root);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const STOPS = [1 / 6, 3 / 6, 5 / 6];          // stage x positions (centre of each grid column)
+  const LINES = 44, PERIOD = 5200;              // ms for one sweep incl. pause
+  let W = 0, H = 0, raf = 0, dead = false, t0 = performance.now(), active = -1;
+  const rgb = name => { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); const m = v.match(/^#([0-9a-f]{6})$/i); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : [230, 230, 230]; };
+  let ink = rgb("--ink"), acc = rgb("--accent");
+  const mo = new MutationObserver(() => { ink = rgb("--ink"); acc = rgb("--accent"); });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  const size = () => { const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2); W = r.width; H = r.height; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); };
+  const ro = new ResizeObserver(size); ro.observe(cv); size();
+  // a line's y at x: tight waist in the middle, fanning out toward both edges
+  const yAt = (x, k) => { const t = Math.abs(x - W / 2) / (W / 2); const spread = 0.025 + 0.975 * Math.pow(t, 1.75); return H / 2 + k * (H * 0.46) * spread; };
+  function draw(now) {
+    if (dead) return;
+    const ph = reduce ? 0.5 : ((now - t0) % PERIOD) / PERIOD;
+    const px = (ph * 1.18 - 0.09) * W;          // pulse travels slightly past both edges
+    ctx.clearRect(0, 0, W, H);
+    // waist glow
+    const rr = H * 0.46, sx = (W * 0.24) / rr;   // elliptical glow that fades out inside the canvas
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(sx, 1);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rr);
+    g.addColorStop(0, `rgba(${ink},.16)`); g.addColorStop(1, `rgba(${ink},0)`);
+    ctx.fillStyle = g; ctx.fillRect(-rr, -rr, rr * 2, rr * 2); ctx.restore();
+    const step = 6;
+    for (let i = 0; i < LINES; i++) {
+      const k = (i / (LINES - 1)) * 2 - 1;
+      // base line, brighter toward the waist
+      const lg = ctx.createLinearGradient(0, 0, W, 0);
+      lg.addColorStop(0, `rgba(${ink},.55)`); lg.addColorStop(.32, `rgba(${ink},.22)`); lg.addColorStop(.5, `rgba(${ink},.9)`);
+      lg.addColorStop(.68, `rgba(${ink},.22)`); lg.addColorStop(1, `rgba(${ink},.55)`);
+      ctx.strokeStyle = lg; ctx.lineWidth = 0.9; ctx.beginPath();
+      for (let x = 0; x <= W; x += step) { const y = yAt(x, k); x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.stroke();
+      // pulse: the same line, re-stroked in accent inside a soft band around px
+      const band = Math.max(26, W * 0.035);
+      const pg = ctx.createLinearGradient(px - band, 0, px + band, 0);
+      pg.addColorStop(0, `rgba(${acc},0)`); pg.addColorStop(.5, `rgba(${acc},1)`); pg.addColorStop(1, `rgba(${acc},0)`);
+      ctx.strokeStyle = pg; ctx.lineWidth = 1.6; ctx.beginPath();
+      const x0 = Math.max(0, px - band), x1 = Math.min(W, px + band);
+      for (let x = x0; x <= x1; x += 3) { const y = yAt(x, k); x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+    // pulse halo
+    const ph2 = ctx.createRadialGradient(px, H / 2, 0, px, H / 2, H * 0.45);
+    ph2.addColorStop(0, `rgba(${acc},.22)`); ph2.addColorStop(1, `rgba(${acc},0)`);
+    ctx.fillStyle = ph2; ctx.fillRect(px - H, 0, H * 2, H);
+    // stage dots sit on the waist line; the stage the pulse last reached lights up
+    let a = -1; STOPS.forEach((s, i) => { if (px >= s * W - 4) a = i; });
+    if (a === -1) a = active === -1 ? 0 : active;
+    if (a !== active) { active = a; stages.forEach((el, i) => el.classList.toggle("on", i === a)); }
+    raf = requestAnimationFrame(draw);
+  }
+  raf = requestAnimationFrame(draw);
+  return () => { dead = true; cancelAnimationFrame(raf); ro.disconnect(); mo.disconnect(); };
+}
+let lfStop = () => {};
 /* ================= Magic bento ================= */
 function bentoHTML(run, st, ing) {
   const det = run?.pipeline?.deterministic || {}, pr = run?.pipeline?.probabilistic || {};
@@ -1506,28 +1594,23 @@ function pageLanding() {
     <a class="btn primary" href="#/reports">Open dashboard →</a>
   </div></header>
 
-  <section class="l-wrap l-hero">
-    <div>
+  <section class="l-hero2">
+    <div class="l-wrap l-hero2-copy">
       <span class="eyebrow">● Intelligent payment reconciliation</span>
       <h1>Every payment, <em>reconciled</em> and explained.</h1>
       <p class="lead">LedgerLens matches your internal ledger, payment gateways and bank settlements, then finds what's missing, duplicated, delayed or mismatched. It tells you why in plain English and keeps a tamper-evident record of every decision.</p>
       <div class="cta"><a class="btn primary lg" href="#/reports">Launch dashboard</a><a class="btn lg" href="#l-features" data-scroll>Explore features</a></div>
-      <div class="l-proof">
-        <span><b>${ing.ledger + ing.gateway + ing.bank || "–"}</b>records reconciled</span>
-        <span><b>${recs ? pct(clean / recs) : "–"}</b>reconcile cleanly</span>
-        <span><b>${st.discrepancies ?? "–"}</b>issues explained</span>
-        <span><b>${Math.round((st.matches?.avg_confidence || 0) * 100)}%</b>avg. match confidence</span>
-      </div>
     </div>
-    <div class="hero-card" aria-hidden="true">
-      <div class="src3">
-        <div class="hc-row"><span class="ico ledger">.csv</span><span><b>Internal ledger</b><br><span class="muted">ORD-1032 · charge</span></span><b>84.20</b></div>
-        <div class="hc-row"><span class="ico gateway">G</span><span><b>NovaPay</b><br><span class="muted">WEB-CHK-5521 · ch_1032A</span></span><b>80.00</b></div>
-        <div class="hc-row"><span class="ico bank">B</span><span><b>Northbank</b><br><span class="muted">payout po_7Hq2E</span></span><b class="muted">—</b></div>
+    <div class="lf" id="lf" aria-label="Pipeline: ingest, reconcile, explain">
+      <canvas class="lf-canvas" aria-hidden="true"></canvas>
+      <div class="lf-stages">
+        ${[
+          ["Ingest", `${(ing.ledger + ing.gateway + ing.bank) || 0}`, "records", `Ledger, ${(ing.gateways || []).length || 1} gateways and ${(ing.bank_accounts || []).length || 1} bank accounts, via CSV or the bank API.`],
+          ["Reconcile", `${recs ? (clean / recs * 100).toFixed(1) : "–"}`, "% clean", `Exact, composite, aggregate and scored matching at ${Math.round((st.matches?.avg_confidence || 0) * 100)}% average confidence.`],
+          ["Explain", `${st.discrepancies ?? 0}`, "issues", "Each one gets a cause, a next step and a hash-chained audit trail."],
+        ].map(([l, v, u, d], i) => `<div class="lf-stage" data-stage="${i}"><span class="lf-stem"></span><div class="lf-label">${l}</div>
+          <div class="lf-value"><span class="num">${v}</span><small>${u}</small></div><p>${d}</p></div>`).join("")}
       </div>
-      <div class="hc-merge">▼ LEDGERLENS ▼</div>
-      <div class="hc-result"><div class="t">Candidate match · 73% confidence</div>
-        <div class="muted" style="font-size:13px;line-height:1.5">Amount differs by 4.20 · same time · reference similarity 14%. This is below the 80% auto-match threshold, so it's <b style="color:var(--accent)">sent to human review</b>.</div></div>
     </div>
   </section>
 
@@ -1589,6 +1672,7 @@ function pageLanding() {
   fcInst = CircularCarousel($("#flexc"), FEATURES, { label: "LedgerLens features", onSelect: i => openFeature(i, lastRun) });
 
   mountBento();
+  lfStop(); lfStop = mountLightField();
   $$("[data-scroll]").forEach(a => a.onclick = e => { e.preventDefault(); document.querySelector(a.getAttribute("href"))?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
   $("#ltheme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 }
@@ -1597,7 +1681,7 @@ async function route() {
   const [page, a, b] = location.hash.slice(2).split("/");
   const landing = !page || page === "home";
   $("#landing").hidden = !landing; $("#app").hidden = landing;
-  if (!landing) { fcInst?.destroy(); fcInst = null; }
+  if (!landing) { fcInst?.destroy(); fcInst = null; lfStop(); }
   if (landing) { document.title = "LedgerLens · Intelligent payment reconciliation"; return pageLanding(); }
   document.title = "LedgerLens";
   renderNav();
