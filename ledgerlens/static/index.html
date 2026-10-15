@@ -290,6 +290,52 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
   .sun-meta { font-size: 12px; } .sun-col p { font-size: 12px; }
   .sun-name { font-size: 25px; letter-spacing: -.03em; }
 }
+
+/* ================= Try it: smooth-scroll case scenes ================= */
+.cs-nav { position: fixed; top: 76px; left: 50%; translate: -50% -12px; z-index: 40; display: flex; gap: 4px; padding: 4px; border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 72%, transparent); border: 1px solid var(--line); backdrop-filter: blur(10px);
+  opacity: 0; pointer-events: none; transition: opacity .3s, translate .3s; }
+.cs-nav.show { opacity: 1; translate: -50% 0; pointer-events: auto; }
+.cs-nav button { border: 0; background: none; font-family: var(--mono); font-size: 14px; padding: 8px 13px; border-radius: 999px; cursor: pointer; color: var(--muted); }
+.cs-nav button.on { background: var(--ink); color: var(--panel); }
+.cs-progress { position: fixed; left: 0; right: 0; top: 0; height: 3px; background: var(--accent); transform-origin: 0 50%; transform: scaleX(0); z-index: 60; opacity: 0; transition: opacity .3s; }
+.cs-readout { position: fixed; right: 22px; bottom: 18px; z-index: 40; font-family: var(--mono); font-size: 13px; color: var(--muted); opacity: 0; transition: opacity .3s; }
+.cs-progress.show, .cs-readout.show { opacity: 1; }
+.cs-scene { position: relative; min-height: 100vh; display: grid; place-items: center; overflow: hidden; }
+.cs-card { width: 300px; height: 400px; border-radius: 6px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+  padding: 22px; display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 1; will-change: transform; }
+.cs-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; border-radius: 6px 6px 0 0; background: var(--ok); }
+.cs-card.high::before { background: var(--high); } .cs-card.medium::before { background: var(--med); }
+.cs-top { display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.cs-tag { font-size: 10.5px; padding: 3px 8px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-weight: 600; letter-spacing: .02em; }
+.cs-card.high .cs-tag { background: var(--high-soft); color: var(--high); } .cs-card.medium .cs-tag { background: var(--med-soft); color: var(--med); }
+.cs-id { font-family: var(--mono); font-size: 26px; font-weight: 700; letter-spacing: -1px; }
+.cs-rows { display: grid; gap: 8px; }
+.cs-rows div { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: var(--row); }
+.cs-rows b { display: block; font-family: var(--mono); font-size: 12.5px; }
+.cs-rows small { color: var(--muted); font-size: 11.5px; }
+.cs-rows em { font-style: normal; font-family: var(--mono); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.cs-bars { display: grid; gap: 12px; margin-top: 6px; }
+.cs-bars div { display: grid; grid-template-columns: 72px 1fr 34px; gap: 8px; align-items: center; font-size: 12.5px; }
+.cs-bars i { height: 10px; border-radius: 5px; background: var(--row); position: relative; overflow: hidden; }
+.cs-bars s, .cs-bars u { position: absolute; inset: 0 auto 0 0; border-radius: 5px; text-decoration: none; }
+.cs-bars s { background: var(--line); } .cs-bars u { background: var(--accent); }
+.cs-bars b { font-family: var(--mono); font-size: 12px; text-align: right; }
+.cs-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: baseline; border-top: 1px dashed var(--line); padding-top: 12px; }
+.cs-foot span { color: var(--muted); font-size: 12.5px; } .cs-foot b { font-family: var(--mono); font-size: 22px; letter-spacing: -1px; }
+.cs-num { position: absolute; top: calc(50% - 34px); left: calc(50% + 120px); margin: 0; z-index: 2; pointer-events: none;
+  font-family: var(--mono); font-size: clamp(44px, 6vw, 68px); font-weight: 700; letter-spacing: -3px; line-height: 1.1; color: var(--accent); will-change: transform; }
+.cs-copy { position: absolute; left: max(24px, calc(50% - 560px)); top: 50%; translate: 0 -50%; max-width: 300px; z-index: 1; }
+.cs-copy h3 { font-size: 26px; letter-spacing: -.02em; margin: 0 0 10px; }
+.cs-copy p { color: var(--ink-2); line-height: 1.55; margin: 0 0 18px; font-size: 15px; }
+@media (max-width: 980px) {
+  .cs-scene { min-height: auto; padding: 90px 20px 70px; grid-template-columns: 1fr; gap: 26px; justify-items: center; }
+  .cs-copy { position: static; translate: none; max-width: 420px; text-align: center; order: 2; }
+  .cs-card { order: 1; }
+  .cs-num { top: 54px; left: auto; right: 18px; font-size: 44px; }
+  .cs-nav { top: 80px; } .cs-nav button { padding: 6px 9px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .cs-num, .cs-card { transform: none !important; } }
 /* ================= Magic bento (How it works) ================= */
 .bento { --glow: 240, 101, 47; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(220px, auto); gap: 12px; position: relative; }
 .bento-card { position: relative; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); padding: 20px 22px;
@@ -1127,6 +1173,92 @@ function mountSunrise() {
   return () => { dead = true; cancelAnimationFrame(raf); ro.disconnect(); };
 }
 let lfStop = () => {};
+
+/* ================= Smooth scroll (Lenis-style) + scroll-linked case scenes ================= */
+const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+function mountSmoothScroll() {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fine = matchMedia("(pointer: fine)").matches;
+  let target = scrollY, current = scrollY, raf = 0, dead = false, tween = null, wheeling = false;
+  const max = () => document.documentElement.scrollHeight - innerHeight;
+  const clamp = v => Math.max(0, Math.min(max(), v));
+  const onWheel = e => {
+    if (reduce || !fine || e.ctrlKey || tween) return;
+    if (e.target.closest("[data-native-scroll], textarea, .drawer, .fc-dialog")) return;
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;   // horizontal swipes stay native (carousel)
+    e.preventDefault();
+    const unit = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? innerHeight : 1;
+    if (!wheeling) { target = current = scrollY; }
+    target = clamp(target + e.deltaY * unit); wheeling = true;
+  };
+  const onScroll = () => { if (!wheeling && !tween) target = current = scrollY; };   // keyboard, scrollbar, anchors
+  addEventListener("wheel", onWheel, { passive: false });
+  addEventListener("scroll", onScroll, { passive: true });
+  let last = 0;
+  const loop = now => {
+    if (dead) return;
+    const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now;
+    if (tween) {
+      const k = Math.min(1, (now - tween.t0) / tween.dur);
+      current = tween.from + (tween.to - tween.from) * easeInOut(k);
+      scrollTo(0, current);
+      if (k >= 1) { tween = null; target = current; }
+    } else if (wheeling) {
+      current += (target - current) * (1 - Math.exp(-dt * 10));   // ~Lenis lerp 0.1 at 60 fps
+      if (Math.abs(target - current) < 0.5) { current = target; wheeling = false; }
+      scrollTo(0, current);
+    }
+    raf = requestAnimationFrame(loop);
+  };
+  raf = requestAnimationFrame(loop);
+  return {
+    scrollTo(y, dur = 1600) {
+      y = clamp(y);
+      if (reduce) { scrollTo(0, y); return; }
+      wheeling = false; tween = { from: scrollY, to: y, t0: performance.now(), dur };
+    },
+    destroy() { dead = true; cancelAnimationFrame(raf); removeEventListener("wheel", onWheel); removeEventListener("scroll", onScroll); },
+  };
+}
+let smooth = null;
+
+function mountCaseScenes() {
+  const scenes = $$(".cs-scene"); if (!scenes.length) return () => {};
+  const nav = $("#cs-nav"), bar = $("#cs-progress"), out = $("#cs-readout"), btns = $$("#cs-nav button");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let raf = 0, dead = false, lastActive = -1;
+  btns.forEach(b => b.onclick = () => {
+    const el = scenes[+b.dataset.to], y = el.getBoundingClientRect().top + scrollY - (innerHeight - el.offsetHeight) / 2;
+    smooth ? smooth.scrollTo(y) : scrollTo({ top: y, behavior: "smooth" });
+  });
+  const loop = () => {
+    if (dead) return;
+    const vh = innerHeight, first = scenes[0].getBoundingClientRect(), lastR = scenes[scenes.length - 1].getBoundingClientRect();
+    const start = first.top + scrollY - vh, end = lastR.bottom + scrollY;
+    const prog = Math.max(0, Math.min(1, (scrollY - start) / (end - start)));
+    const inView = first.top < vh * 0.6 && lastR.bottom > vh * 0.4;
+    nav.classList.toggle("show", inView); bar.classList.toggle("show", inView); out.classList.toggle("show", inView);
+    bar.style.transform = `scaleX(${prog})`; out.textContent = Math.round(prog * 100) + "%";
+    const narrow = innerWidth <= 980;
+    let active = 0, best = Infinity;
+    scenes.forEach((sc, i) => {
+      const r = sc.getBoundingClientRect();
+      // 0 when the scene enters from below, 1 when it leaves at the top
+      const p = Math.max(0, Math.min(1, (vh - r.top) / (vh + r.height)));
+      if (!reduce) {
+        const range = narrow ? 80 : 300;
+        sc.querySelector(".cs-num").style.transform = `translateY(${(-range + 2 * range * p).toFixed(1)}px)`;
+        sc.querySelector(".cs-card").style.transform = `translateY(${((0.5 - p) * (narrow ? 20 : 60)).toFixed(1)}px) rotate(${((p - 0.5) * (narrow ? 2 : 4)).toFixed(2)}deg)`;
+      }
+      const d = Math.abs(r.top + r.height / 2 - vh / 2); if (d < best) { best = d; active = i; }
+    });
+    if (active !== lastActive) { lastActive = active; btns.forEach((b, i) => b.classList.toggle("on", i === active)); }
+    raf = requestAnimationFrame(loop);
+  };
+  raf = requestAnimationFrame(loop);
+  return () => { dead = true; cancelAnimationFrame(raf); };
+}
+let csStop = () => {};
 /* ================= Magic bento ================= */
 function bentoHTML(run, st, ing) {
   const det = run?.pipeline?.deterministic || {}, pr = run?.pipeline?.probabilistic || {};
@@ -1277,12 +1409,24 @@ const FEATURES = [
     demo: ["Bank API simulator: GET /sim/bank/v1/transactions", "#/sources"] },
 ];
 const LANDING_SCEN = [
-  ["ORD-1005", "Customer charged twice: two real transactions, not a webhook replay.", "#/trace"],
-  ["po_7Hq2D", "Bank short by exactly one transaction's net. LedgerLens names which one.", "#/payouts"],
-  ["ORD-1032", "73% candidate: confirm it, and the leftover $4.20 is flagged on the next run.", "#/queue"],
-  ["ORD-3002–4", "One $100 consolidated checkout pays three orders.", "#/trace"],
-  ["PS-STL-02+03", "One batched deposit settles two Paystream payouts.", "#/payouts"],
-  ["ORD-3008", "Chargeback won: the reversal is matched on both sides, so no exception.", "#/disputes"],
+  { id: "ORD-1005", tag: "DUPLICATE_CHARGE", sev: "high", title: "Customer charged twice", href: "#/trace",
+    d: "Two distinct transactions two minutes apart, not a webhook replay. Money really moved twice.",
+    rows: [["ch_1005A", "NovaPay · 09:41", "19.99"], ["ch_1005B", "NovaPay · 09:43", "19.99"], ["JE-5005", "Ledger · 1 charge", "19.99"]], foot: ["Over-collected", "+19.99"] },
+  { id: "po_7Hq2D", tag: "PAYOUT_AMOUNT_MISMATCH", sev: "high", title: "Bank short by one transaction", href: "#/payouts",
+    d: "The deposit is $19.11 short, exactly the net of ch_1027A, so LedgerLens names the transaction the bank left out.",
+    rows: [["po_7Hq2D", "Expected · 7 txns", "183.06"], ["BNK-90404", "Northbank received", "163.95"], ["ch_1027A", "Net of one txn", "19.11"]], foot: ["Gap", "−19.11"] },
+  { id: "ORD-1032", tag: "CANDIDATE · 73%", sev: "medium", title: "Close call, sent to a human", href: "#/queue",
+    d: "Same time, $4.20 short, different reference. Below the 80% auto-match bar, so a reviewer confirms it and the leftover is flagged next run.",
+    bars: [["Amount", .41, .55], ["Date", .30, .30], ["Reference", .02, .15]], foot: ["Confidence", "73%"] },
+  { id: "ORD-3002–4", tag: "ONE-TO-MANY", sev: "ok", title: "One checkout, three orders", href: "#/trace",
+    d: "A consolidated $100 Paystream capture pays three ledger orders. LedgerLens finds the combination that adds up.",
+    rows: [["ORD-3002", "Ledger", "30.00"], ["ORD-3003", "Ledger", "45.50"], ["ORD-3004", "Ledger", "24.50"]], foot: ["= CART-77", "100.00"] },
+  { id: "PS-STL-02+03", tag: "BATCHED DEPOSIT", sev: "ok", title: "One deposit, two payouts", href: "#/payouts",
+    d: "Harbor Bank received a single transfer that settles two Paystream payouts. The narrative names both, so it's matched one-to-many.",
+    rows: [["PS-STL-02", "Paystream payout", "due 9 Oct"], ["PS-STL-03", "Paystream payout", "due 11 Oct"], ["HB-1103", "Harbor Bank · 11 Oct", "1 line"]], foot: ["PS-STL-02", "+2 days late"] },
+  { id: "ORD-3008", tag: "DISPUTE WON", sev: "ok", title: "Chargeback reversed", href: "#/disputes",
+    d: "The cardholder disputed the charge, then the merchant won. Both sides recorded the reversal, so nothing is flagged and it counts toward the win rate.",
+    rows: [["ps_txn_3008", "Charge · 7 Oct", "120.00"], ["ps_cb_3008", "Chargeback · 8 Oct", "−135.00"], ["ps_rv_3008", "Reversal · 12 Oct", "+120.00"]], foot: ["Status", "won"] },
 ];
 let fcInst = null;
 /* ================= FlexCarousel =================
@@ -1663,8 +1807,22 @@ function pageLanding() {
   <section class="l-sec" id="l-try" style="padding-top:20px"><div class="l-wrap">
     <span class="eyebrow">Try it</span>
     <h2>Six cases worth clicking.</h2>
-    <p class="sub">Each one is planted in the demo data to show a different part of the engine.</p>
-    <div class="scen">${LANDING_SCEN.map(([t, d, h]) => `<a href="${h}"><span class="tag">${esc(t)}</span><p>${esc(d)}</p></a>`).join("")}</div>
+    <p class="sub">Each one is planted in the demo data to show a different part of the engine. Scroll through them, or jump with the pill above.</p>
+  </div>
+  <nav class="cs-nav" id="cs-nav" aria-label="Jump to case">${LANDING_SCEN.map((c, i) => `<button data-to="${i}" aria-label="Case ${i + 1}: ${esc(c.title)}">${String(i + 1).padStart(2, "0")}</button>`).join("")}</nav>
+  <div class="cs-progress" id="cs-progress"></div><output class="cs-readout" id="cs-readout">0%</output>
+  ${LANDING_SCEN.map((c, i) => `<section class="cs-scene" id="cs-${i}" data-i="${i}">
+    <div class="cs-card ${c.sev}">
+      <div class="cs-top"><span>${String(i + 1).padStart(3, "0")}</span><span class="cs-tag">${esc(c.tag)}</span></div>
+      <div class="cs-id">${esc(c.id)}</div>
+      ${c.rows ? `<div class="cs-rows">${c.rows.map(([a, b, v]) => `<div><span><b>${esc(a)}</b><small>${esc(b)}</small></span><em>${esc(v)}</em></div>`).join("")}</div>` : ""}
+      ${c.bars ? `<div class="cs-bars">${c.bars.map(([n, v, w]) => `<div><span>${n}</span><i><s style="width:${w * 100}%"></s><u style="width:${v * 100}%"></u></i><b>+${Math.round(v * 100)}</b></div>`).join("")}</div>` : ""}
+      <div class="cs-foot"><span>${esc(c.foot[0])}</span><b>${esc(c.foot[1])}</b></div>
+    </div>
+    <h2 class="cs-num" aria-hidden="true">#${String(i + 1).padStart(3, "0")}</h2>
+    <div class="cs-copy"><h3>${esc(c.title)}</h3><p>${esc(c.d)}</p><a class="btn primary" href="${c.href}">Open in dashboard →</a></div>
+  </section>`).join("")}
+  <div class="l-wrap">
     <div class="stack3" style="margin-top:28px">
       <div class="term"><span class="c"># one command, no dependencies (Python 3.10+)</span><br><span class="p">$</span> python3 -m ledgerlens up<br><span class="c"># reconcile your own files</span><br><span class="p">$</span> python3 -m ledgerlens run --ledger l.csv \\<br>&nbsp;&nbsp;--gateway a.csv --gateway b.csv --bank x.csv<br><span class="p">$</span> python3 -m ledgerlens verify</div>
       <div class="pcard"><h3>Built with</h3><p style="margin-bottom:12px">Pure Python standard library: SQLite, http.server and difflib. No framework, no build step, no external services. The dashboard is a single dependency-free HTML file.</p>
@@ -1681,7 +1839,10 @@ function pageLanding() {
 
   mountBento();
   lfStop(); lfStop = mountSunrise();
-  $$("[data-scroll]").forEach(a => a.onclick = e => { e.preventDefault(); document.querySelector(a.getAttribute("href"))?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
+  csStop(); csStop = mountCaseScenes();
+  if (!smooth) smooth = mountSmoothScroll();
+  $$("[data-scroll]").forEach(a => a.onclick = e => { e.preventDefault(); const el = document.querySelector(a.getAttribute("href")); if (!el) return;
+    const y = el.getBoundingClientRect().top + scrollY - 70; smooth ? smooth.scrollTo(y) : el.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
   $("#ltheme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 }
 /* ---------- router ---------- */
@@ -1689,7 +1850,7 @@ async function route() {
   const [page, a, b] = location.hash.slice(2).split("/");
   const landing = !page || page === "home";
   $("#landing").hidden = !landing; $("#app").hidden = landing;
-  if (!landing) { fcInst?.destroy(); fcInst = null; lfStop(); }
+  if (!landing) { fcInst?.destroy(); fcInst = null; lfStop(); csStop(); smooth?.destroy(); smooth = null; }
   if (landing) { document.title = "LedgerLens · Intelligent payment reconciliation"; return pageLanding(); }
   document.title = "LedgerLens";
   renderNav();
