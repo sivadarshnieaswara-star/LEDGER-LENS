@@ -9,20 +9,59 @@ It runs on Python 3.10+ and uses only the standard library.
 ## Quick start
 
 ```bash
-python3 -m ledgerlens demo --fresh     # sample data + three daily close-outs (8, 12, 15 Oct)
-python3 -m ledgerlens serve            # dashboard at http://127.0.0.1:8765
-python3 -m unittest -v tests.test_ledgerlens
+python3 -m ledgerlens up        # builds demo data on first run, opens http://127.0.0.1:8765
 ```
 
-Reconcile your own files, with the bank side from a CSV or from a bank API:
+It needs Python 3.10+ and nothing else: no `pip install`, no database server.
+
+## Features
+
+| | |
+|---|---|
+| **Three-way reconciliation** | Internal ledger ↔ gateway settlement feed ↔ bank (CSV or a simulated bank API) |
+| **Two-stage matching** | Deterministic (normalised references, payout IDs) and then probabilistic scoring (amount, date, reference similarity) |
+| **Explainable discrepancies** | 16 types, each with a severity, a plain-English cause, a suggested action and the exact records involved |
+| **Human-in-the-loop** | Confirm suggested candidate matches; confirmed pairs are reused in every later run |
+| **Exception queue** | Filters, search, exception age, bulk investigate/assign/resolve/accept, CSV export |
+| **Reconciliation reports** | One per source pair per run, filterable by source and date, exportable to CSV |
+| **Trends** | Match rate over time per source pair, and open exceptions by type |
+| **Follow the money** | Each order traced from ledger → gateway → payout → bank, with the broken link highlighted |
+| **Bring your own data** | Upload three CSVs in the browser (templates provided). Column names are matched flexibly. |
+| **Tamper-evident audit trail** | Append-only, SHA-256 hash-chained events; any edit is detected |
+| **Polish** | Light and dark themes, responsive down to phone width, keyboard shortcuts |
+
+## Demo script for judges (3 minutes)
+
+1. **Reconciliation.** Three daily close-outs are already loaded. The Gateway ↔ Bank match
+   rate drops as payouts go missing (see the chart). Click a report row to see each
+   discrepancy and every match with its method and confidence.
+2. **Exception queue.** Open *"ORD-1032 charge not found at gateway"*. Probabilistic matching
+   found a 73% candidate (same time, $4.20 short, different reference). Click
+   **Confirm match**.
+3. **Data sources.** Pick **API simulator** and click **Run reconciliation**. The confirmed
+   pair is now matched, and the leftover $4.20 is flagged as an `AMOUNT_MISMATCH`, so
+   nothing is lost.
+4. **Follow the money.** Search `1005` to see a customer charged twice (two distinct
+   transactions), as opposed to `1003`, which is a harmless webhook replay.
+5. **Audit trail.** Every detection and decision appears with its hash, and the badge
+   confirms the chain is intact.
+6. **Bring your own data.** Under Data sources, download the templates, edit them and
+   upload them.
+
+Keyboard shortcuts: `r` reports · `q` queue · `t` trace · `p` pipeline · `d` data sources ·
+`a` audit · `/` search · `Esc` close panel.
+
+## CLI
 
 ```bash
+python3 -m ledgerlens demo --fresh
+python3 -m ledgerlens serve
 python3 -m ledgerlens run --ledger ledger.csv --gateway gateway.csv --bank bank.csv --as-of 2026-10-15
 python3 -m ledgerlens run --ledger ledger.csv --gateway gateway.csv --bank-api http://127.0.0.1:8765/sim/bank/v1
 python3 -m ledgerlens list --status active
-python3 -m ledgerlens show MISSING_IN_GATEWAY:JE-5033
 python3 -m ledgerlens act MISSING_IN_GATEWAY:JE-5033 link --candidate ch_1032A --actor ana --note "promo"
 python3 -m ledgerlens verify
+python3 -m unittest -v tests.test_ledgerlens
 ```
 
 ## Architecture
@@ -114,6 +153,7 @@ ledgerlens/
   engine.py   deterministic + probabilistic matching, classifier, reports
   store.py    SQLite: runs, reports, exception queue, reviewer links, hash-chained events
   service.py  one run end to end (shared by CLI and server)
+  export.py   CSV exports for exceptions and reports
   server.py   JSON API, simulator endpoint, dashboard (static/index.html)
   samples.py  deterministic demo data with one planted case per problem
   cli.py

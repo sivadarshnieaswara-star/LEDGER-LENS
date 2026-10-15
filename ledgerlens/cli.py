@@ -108,6 +108,19 @@ def cmd_demo(a) -> int:
     return 0
 
 
+def cmd_up(a) -> int:
+    """One command for judges: build demo data if needed, then open the dashboard."""
+    if not os.path.exists(a.db):
+        cmd_demo(argparse.Namespace(out=a.data, db=a.db, fresh=True))
+    from .server import serve
+    import threading
+    import webbrowser
+    if not a.no_browser:
+        threading.Timer(1.0, webbrowser.open, [f"http://{a.host}:{a.port}"]).start()
+    serve(a.db, a.data, a.host, a.port)
+    return 0
+
+
 def cmd_serve(a) -> int:
     from .server import serve
     serve(a.db, a.data, a.host, a.port)
@@ -166,6 +179,13 @@ def main(argv=None) -> int:
     sv.add_argument("--port", type=int, default=8765)
     sv.add_argument("--data", default="samples", help="folder with ledger.csv/gateway.csv/bank.csv")
     sv.set_defaults(fn=cmd_serve)
+
+    u = sub.add_parser("up", help="demo data (first time) + dashboard, in one command")
+    u.add_argument("--host", default="127.0.0.1")
+    u.add_argument("--port", type=int, default=8765)
+    u.add_argument("--data", default="samples")
+    u.add_argument("--no-browser", action="store_true")
+    u.set_defaults(fn=cmd_up)
 
     a = p.parse_args(argv)
     return a.fn(a)

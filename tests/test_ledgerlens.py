@@ -179,5 +179,55 @@ class SnapshotAndApiTest(unittest.TestCase):
             httpd.server_close()
 
 
+class DashboardApiTest(unittest.TestCase):
+    """Upload, bulk triage and export endpoints, end to end over HTTP."""
+    def setUp(self):
+        import json, urllib.request
+        self.json, self.urlreq = json, urllib.request
+        self.tmp = tempfile.mkdtemp()
+        self.paths = samples.generate(self.tmp)
+        self.db = os.path.join(self.tmp, "t.db")
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self.db, self.tmp, 0))
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+        self.base = f"http://127.0.0.1:{self.httpd.server_port}"
+
+    def tearDown(self):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+    def post(self, path, body):
+        req = self.urlreq.Request(self.base + path, self.json.dumps(body).encode(),
+                                  {"Content-Type": "application/json"})
+        try:
+            with self.urlreq.urlopen(req) as r:
+                return r.status, self.json.load(r)
+        except self.urlreq.HTTPError as e:
+            return e.code, self.json.load(e)
+
+    def get(self, path):
+        with self.urlreq.urlopen(self.base + path) as r:
+            return r.read().decode()
+
+    def test_upload_bulk_and_export(self):
+        files = {k: open(self.paths[k]).read() for k in ("ledger", "gateway", "bank")}
+        code, body = self.post("/api/upload", {"files": files, "as_of": "2026-10-15"})
+        self.assertEqual(code, 200)
+        self.assertEqual(body["stats"]["discrepancies"], 15)
+        code, body = self.post("/api/upload", {"files": {**files, "bank": "bank_ref,value_date,amount\nX,nope,1"}})
+        self.assertEqual(code, 400)
+        self.assertIn("bad date", body["error"])
+
+        fps = ["FEE_VARIANCE:ch_1017A", "MISSING_SETTLEMENT:po_7Hq2E"]
+        code, body = self.post("/api/exceptions/bulk", {"fingerprints": fps, "action": "accept", "actor": "j"})
+        self.assertEqual(body["done"], [])                       # note required
+        code, body = self.post("/api/exceptions/bulk",
+                               {"fingerprints": fps, "action": "accept", "actor": "j", "note": "ok"})
+        self.assertEqual(sorted(body["done"]), sorted(fps))
+
+        csv_text = self.get("/api/export/exceptions.csv?status=accepted")
+        self.assertEqual(len(csv_text.strip().splitlines()), 3)
+        self.assertIn("Matched %", self.get("/api/export/report/1/gateway_bank.csv"))
+
+
 if __name__ == "__main__":
     unittest.main()

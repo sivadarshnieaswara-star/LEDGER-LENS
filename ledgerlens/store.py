@@ -296,7 +296,26 @@ class Store:
             q, args = q + " WHERE status=?", (status,)
         q += (" ORDER BY CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,"
               " kind, fingerprint")
-        return [self._row(r) for r in self.db.execute(q, args)]
+        as_of = {r["id"]: r["as_of"] for r in self.db.execute("SELECT id, as_of FROM runs")}
+        latest = max(as_of.values()) if as_of else None
+        out = []
+        for r in self.db.execute(q, args):
+            d = self._row(r)
+            first = as_of.get(d["first_seen_run"])
+            d["age_days"] = ((dt.date.fromisoformat(latest) - dt.date.fromisoformat(first)).days
+                             if first and latest else 0)
+            out.append(d)
+        return out
+
+    def bulk(self, fps: list[str], action: str, actor: str, note: str = "") -> dict:
+        done, failed = [], {}
+        for fp in fps:
+            try:
+                self.act(fp, action, actor, note)
+                done.append(fp)
+            except ActionError as exc:
+                failed[fp] = str(exc)
+        return {"done": done, "failed": failed}
 
     def exception(self, fp: str) -> dict | None:
         r = self.db.execute("SELECT * FROM exceptions WHERE fingerprint=?", (fp,)).fetchone()

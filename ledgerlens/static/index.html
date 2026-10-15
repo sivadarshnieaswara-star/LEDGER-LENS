@@ -17,6 +17,16 @@
   --low: #50606f; --low-soft: #edf1f5; --ok: #23843f; --ok-soft: #e7f4ea;
   --shadow: 0 1px 2px rgba(20,20,20,.05), 0 4px 18px rgba(20,20,20,.05);
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --hover: #f0eeeb; --logo: #17181a;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0f1012; --panel: #18191c; --ink: #ecebe8; --ink-2: #c9c8c4; --muted: #8f939a;
+  --line: #2a2c30; --row: #1e2023; --nav-active: #3a332c; --hover: #25272b; --logo: #ecebe8;
+  --accent: #f0652f; --accent-soft: #3a2117;
+  --high: #ff8a80; --high-soft: #3b1d1b; --med: #f5b955; --med-soft: #3a2d17;
+  --low: #a9b8c7; --low-soft: #222a32; --ok: #6fd28d; --ok-soft: #173022;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 18px rgba(0,0,0,.25);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -84,7 +94,29 @@ th { text-align: left; font-weight: 600; font-size: 15px; padding: 14px 12px; }
 td { padding: 0 12px; height: 64px; vertical-align: middle; }
 tbody tr:nth-child(odd) td { background: var(--row); }
 tbody tr.click { cursor: pointer; }
-tbody tr.click:hover td { background: #f0eeeb; }
+tbody tr.click:hover td { background: var(--hover); }
+tbody tr.sel td { background: var(--accent-soft) !important; }
+.bulkbar { position: sticky; top: 8px; z-index: 10; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  background: var(--ink); color: var(--panel); padding: 10px 14px; border-radius: 10px; margin: 0 0 12px; }
+.bulkbar .btn { padding: 6px 12px; }
+.bulkbar input { background: var(--panel); color: var(--ink); border: 0; }
+.chk { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; }
+.chart text { fill: var(--muted); font-size: 11px; font-family: Figtree, sans-serif; }
+.chart .grid { stroke: var(--line); }
+.legend-row { display: flex; gap: 16px; margin: 0 8px 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.legend-row i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.kbar { display: grid; grid-template-columns: 150px 1fr 34px; gap: 10px; align-items: center; padding: 5px 8px; font-size: 13px; }
+.kbar .track { height: 8px; background: var(--row); border-radius: 4px; overflow: hidden; }
+.kbar .track i { display: block; height: 100%; border-radius: 4px; }
+.kbar .k { font-family: var(--mono); font-size: 11px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 6px; cursor: pointer; }
+.drop.ok { border-color: var(--ok); background: var(--ok-soft); }
+.drop b { font-size: 14px; }
+.age { font-variant-numeric: tabular-nums; }
+.age.old { color: var(--high); font-weight: 600; }
+kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } .kbar { grid-template-columns: 110px 1fr 28px; } }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .r { text-align: right; }
 .mono { font-family: var(--mono); font-size: 12.5px; }
@@ -205,11 +237,11 @@ tbody tr.click:hover td { background: #f0eeeb; }
 <div class="app" id="app">
   <aside class="side">
     <div class="logo">
-      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="13" cy="13" r="9.5" fill="none" stroke="#17181a" stroke-width="3.2"/><path d="M20 20l7 7" stroke="#d64511" stroke-width="3.6" stroke-linecap="round"/><path d="M9 9v8h7" fill="none" stroke="#17181a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="13" cy="13" r="9.5" fill="none" stroke="var(--logo)" stroke-width="3.2"/><path d="M20 20l7 7" stroke="#d64511" stroke-width="3.6" stroke-linecap="round"/><path d="M9 9v8h7" fill="none" stroke="var(--logo)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>LedgerLens</span>
     </div>
     <nav class="nav" id="nav"></nav>
-    <div class="foot"><button class="collapse" id="collapse" title="Collapse sidebar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button></div>
+    <div class="foot" style="justify-content:space-between"><button class="collapse" id="theme" title="Toggle dark mode" aria-label="Toggle dark mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button><button class="collapse" id="collapse" title="Collapse sidebar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button></div>
   </aside>
   <main class="main" id="page"></main>
 </div>
@@ -242,7 +274,7 @@ const CHEV = '<svg class="chev" viewBox="0 0 24 24" style="width:16px;height:16p
 const SRC_ICON = { "Internal ledger": '<span class="ico ledger">.csv</span>', "Gateway settlement feed": '<span class="ico gateway">G</span>', "Bank settlement": '<span class="ico bank">B</span>' };
 const src = name => `<span class="src">${SRC_ICON[name] || ""}${esc(name)}</span>`;
 
-const S = { summary: null, exceptions: [], reports: [], filters: { pairs: [], from: "", to: "" }, qStatus: "active", qSev: "", q: "", tab: "disc" };
+const S = { summary: null, exceptions: [], reports: [], filters: { pairs: [], from: "", to: "" }, qStatus: "active", qSev: "", q: "", tab: "disc", sel: new Set() };
 
 async function refresh() {
   const [summary, exceptions, reports] = await Promise.all([api("/api/summary"), api("/api/exceptions"), api("/api/reports")]);
@@ -285,6 +317,7 @@ function pageReports() {
     + kpis([["Total reconciled amount", amt(recon, ccy), latestId ? `Run #${latestId} · both source pairs` : "No runs yet"],
             ["Matched percentage", recs ? pct(clean / recs) : "–", recs ? `${clean} of ${recs} records reconcile cleanly` : ""],
             ["Amount difference", amt(diff, ccy), "Money sitting in discrepancies"]])
+    + `<div class="grid2">${trendCard()}${kindCard()}</div>`
     + `<div class="card"><h2>Reconciliation reports</h2>
       <div class="tbox">
         <div class="filters" id="filters"><span class="lbl">Filter by</span>
@@ -303,6 +336,38 @@ function pageReports() {
   $$("tr[data-href]").forEach(tr => tr.onclick = () => location.hash = tr.dataset.href);
   $("#clearf") && ($("#clearf").onclick = () => { S.filters = { pairs: [], from: "", to: "" }; pageReports(); });
   $$("[data-pop]").forEach(b => b.onclick = e => { e.stopPropagation(); openPop(b); });
+}
+
+const SERIES = { ledger_gateway: ["Ledger ↔ Gateway", "#d64511"], gateway_bank: ["Gateway ↔ Bank", "#3b6fd8"] };
+function trendCard() {
+  const runs = [...new Set(S.reports.map(r => r.run_id))].sort((a, b) => a - b);
+  if (runs.length < 2) return `<div class="card"><h2>Match rate over time</h2><div class="empty">Trends appear after two or more runs.</div></div>`;
+  const W = 560, H = 210, L = 40, R = 14, T = 12, B = 34;
+  const x = i => L + (W - L - R) * (runs.length === 1 ? .5 : i / (runs.length - 1));
+  const y = v => T + (H - T - B) * (1 - v);
+  const grid = [0, .25, .5, .75, 1].map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v * 100}%</text>`).join("");
+  const xl = runs.map((id, i) => { const r = S.reports.find(q => q.run_id === id); return `<text x="${x(i)}" y="${H - 12}" text-anchor="middle">#${id} · ${dayFmt(r.as_of).slice(0, 6)}</text>`; }).join("");
+  const lines = Object.entries(SERIES).map(([pair, [label, color]]) => {
+    const pts = runs.map((id, i) => { const r = S.reports.find(q => q.run_id === id && q.pair === pair); return r ? [x(i), y(r.matched_pct), r] : null; }).filter(Boolean);
+    return `<polyline fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" points="${pts.map(p => p[0] + "," + p[1]).join(" ")}"/>`
+      + pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="var(--panel)" stroke="${color}" stroke-width="2.4"><title>${label} · run #${p[2].run_id}: ${pct(p[2].matched_pct)} clean, ${amt(p[2].mismatched_amount, p[2].currency)} mismatched</title></circle>`).join("");
+  }).join("");
+  return `<div class="card"><h2>Match rate over time <span class="sub">share of records reconciling cleanly, per run</span></h2>
+    <div class="legend-row">${Object.values(SERIES).map(([l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join("")}</div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Match rate trend">${grid}${xl}${lines}</svg></div>`;
+}
+const KIND_COLOR = { high: "var(--high)", medium: "var(--med)", low: "var(--low)" };
+function kindCard() {
+  const active = S.exceptions.filter(e => ["open", "investigating"].includes(e.status));
+  const by = {};
+  active.forEach(e => { by[e.kind] = by[e.kind] || { n: 0, sev: e.severity }; by[e.kind].n++; });
+  const rows = Object.entries(by).sort((a, b) => b[1].n - a[1].n);
+  const max = Math.max(1, ...rows.map(r => r[1].n));
+  return `<div class="card"><h2>Open exceptions by type <span class="sub">${active.length} total</span></h2>
+    ${rows.length ? rows.map(([k, v]) => `<div class="kbar" title="${esc(k)}"><span class="k">${esc(k.replace(/_/g, " ").toLowerCase())}</span>
+      <span class="track"><i style="width:${v.n / max * 100}%;background:${KIND_COLOR[v.sev]}"></i></span><b class="num">${v.n}</b></div>`).join("")
+      : `<div class="empty">Nothing open. Inbox zero.</div>`}
+    <div style="padding:10px 8px 0"><a class="btn" href="#/queue">Open exception queue →</a></div></div>`;
 }
 
 function openPop(btn) {
@@ -335,7 +400,8 @@ async function pageReport(runId, pair) {
   const tab = S.tab;
   $("#page").innerHTML = `<div class="head"><div><a class="crumb" href="#/reports">‹ Reconciliation reports</a>
       <h1 style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${src(r.source_a)} <span class="muted">↔</span> ${src(r.source_b)}</h1>
-      <p>Run #${r.run.id}${r.run.label ? " · " + esc(r.run.label) : ""} · as of ${dayFmt(r.run.as_of)}</p></div></div>`
+      <p>Run #${r.run.id}${r.run.label ? " · " + esc(r.run.label) : ""} · as of ${dayFmt(r.run.as_of)}</p></div>
+      <div class="grow"></div><a class="btn" href="/api/export/report/${r.run.id}/${pair}.csv" download>⤓ Export CSV</a></div>`
     + kpis([["Reconciled amount", amt(r.reconciled_amount, r.currency)], ["Matched percentage", pct(r.matched_pct), `${r.clean} of ${r.records} records clean`],
             ["Amount difference", amt(r.mismatched_amount, r.currency), `${r.discrepancies.length} discrepancies`]])
     + `<div class="card"><div class="tabs2"><button data-t="disc" class="${tab === "disc" ? "on" : ""}">Discrepancies (${r.discrepancies.length})</button>
@@ -345,12 +411,14 @@ async function pageReport(runId, pair) {
   bindRows();
 }
 
-function discTable(list) {
+function discTable(list, selectable = false) {
   if (!list.length) return `<div class="empty">No discrepancies. Everything reconciled.</div>`;
-  return `<table><thead><tr><th>Severity</th><th>Issue</th><th class="r">Impact</th><th class="hide-sm">Status</th></tr></thead><tbody>
-    ${list.map(e => `<tr class="click" data-fp="${esc(e.fingerprint)}"><td><span class="sev ${e.severity}">${e.severity}</span></td>
+  const all = selectable && list.every(e => S.sel.has(e.fingerprint));
+  return `<table><thead><tr>${selectable ? `<th style="width:36px"><input type="checkbox" class="chk" id="selall" aria-label="Select all" ${all ? "checked" : ""}></th>` : ""}<th>Severity</th><th>Issue</th><th class="r">Impact</th>${selectable ? `<th class="hide-sm r">Age</th>` : ""}<th class="hide-sm">Status</th></tr></thead><tbody>
+    ${list.map(e => `<tr class="click ${selectable && S.sel.has(e.fingerprint) ? "sel" : ""}" data-fp="${esc(e.fingerprint)}">${selectable ? `<td><input type="checkbox" class="chk" data-sel="${esc(e.fingerprint)}" aria-label="Select" ${S.sel.has(e.fingerprint) ? "checked" : ""}></td>` : ""}<td><span class="sev ${e.severity}">${e.severity}</span></td>
       <td><div>${esc(e.summary)}</div><div class="kind">${esc(e.kind)}${e.assignee ? " · @" + esc(e.assignee) : ""}${e.candidates?.length && ["open","investigating"].includes(e.status) ? ` · <span style="color:var(--accent)">${e.candidates.length} candidate${e.candidates.length > 1 ? "s" : ""} to review</span>` : ""}</div></td>
       <td class="r num">${e.amount_delta ? amt(e.amount_delta, e.currency || "USD") : "–"}</td>
+      ${selectable ? `<td class="hide-sm r age ${e.age_days >= 3 && ["open", "investigating"].includes(e.status) ? "old" : ""}" title="Days since first detected">${e.age_days}d</td>` : ""}
       <td class="hide-sm"><span class="st ${e.status}">${e.status.replace("_", " ")}</span></td></tr>`).join("")}</tbody></table>`;
 }
 
@@ -362,7 +430,7 @@ function matchTable(list) {
       <td class="hide-sm muted" style="font-size:13px">${esc(m.explanation)}</td></tr>`).join("")}</tbody></table>`;
 }
 
-function bindRows() { $$("tr[data-fp]").forEach(r => r.onclick = () => openDrawer(r.dataset.fp)); }
+function bindRows() { $$("tr[data-fp]").forEach(r => r.onclick = e => { if (e.target.closest(".chk")) return; openDrawer(r.dataset.fp); }); }
 
 /* ---------- Exception queue ---------- */
 function pageQueue() {
@@ -382,11 +450,30 @@ function pageQueue() {
         ${STAT.map(([k, l]) => `<button class="chip ${S.qStatus === k ? "on" : ""}" data-st="${k}">${l}<span class="n">${S.exceptions.filter(e => match(e, k)).length}</span></button>`).join("")}
         <span style="width:8px"></span>
         ${["high", "medium", "low"].map(s => `<button class="chip ${S.qSev === s ? "on" : ""}" data-sv="${s}">${s}</button>`).join("")}
-        <span style="flex:1"></span><input type="search" id="q" placeholder="Search order, txn, payout…" value="${esc(S.q)}"></div>
-      <div class="tbox">${discTable(rows)}</div></div>`;
+        <span style="flex:1"></span><input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S.q)}">
+        <a class="btn" href="/api/export/exceptions.csv${S.qStatus ? "?status=" + S.qStatus : ""}" download>⤓ Export CSV</a></div>
+      ${S.sel.size ? `<div class="bulkbar"><b>${S.sel.size} selected</b><span style="flex:1"></span>
+        <input type="text" id="bnote" placeholder="Note for the audit trail" style="min-width:220px">
+        <button class="btn" data-bulk="investigate">Investigate</button><button class="btn" data-bulk="assign">Assign to me</button>
+        <button class="btn" data-bulk="accept">Accept</button><button class="btn primary" data-bulk="resolve">Resolve</button>
+        <button class="btn" id="bclear">Clear</button></div>` : ""}
+      <div class="tbox">${discTable(rows, true)}</div></div>`;
   $$("[data-st]").forEach(b => b.onclick = () => { S.qStatus = b.dataset.st; pageQueue(); });
   $$("[data-sv]").forEach(b => b.onclick = () => { S.qSev = S.qSev === b.dataset.sv ? "" : b.dataset.sv; pageQueue(); });
   const q = $("#q"); q.oninput = () => { S.q = q.value; const p = q.selectionStart; pageQueue(); const n = $("#q"); n.focus(); n.setSelectionRange(p, p); };
+  $$("[data-sel]").forEach(c => c.onchange = () => { c.checked ? S.sel.add(c.dataset.sel) : S.sel.delete(c.dataset.sel); pageQueue(); });
+  $("#selall") && ($("#selall").onchange = e => { rows.forEach(r => e.target.checked ? S.sel.add(r.fingerprint) : S.sel.delete(r.fingerprint)); pageQueue(); });
+  $("#bclear") && ($("#bclear").onclick = () => { S.sel.clear(); pageQueue(); });
+  $$("[data-bulk]").forEach(b => b.onclick = async () => {
+    const actor = lsGet("ll_actor") || prompt("Your name for the audit trail:") || "";
+    if (!actor.trim()) return;
+    lsSet("ll_actor", actor);
+    const action = b.dataset.bulk, note = action === "assign" ? actor : $("#bnote").value.trim();
+    if (["resolve", "accept"].includes(action) && !note) { toast("Add a note before resolving or accepting"); $("#bnote").focus(); return; }
+    const r = await post("/api/exceptions/bulk", { fingerprints: [...S.sel], action, actor, note });
+    S.sel.clear(); await refresh(); pageQueue();
+    toast(`${r.done.length} updated` + (Object.keys(r.failed).length ? ` · ${Object.keys(r.failed).length} skipped (not allowed from their status)` : ""));
+  });
   bindRows();
 }
 
@@ -551,11 +638,35 @@ function pageSources() {
         <button class="btn primary" id="runbtn" ${s.data_ready ? "" : "disabled"}>Run reconciliation</button>
         ${s.data_ready ? "" : `<span class="muted">Sample files are missing. Run <code>python -m ledgerlens demo</code> first.</span>`}
       </div></div>
+    <div class="card"><h2>Reconcile your own data <span class="sub">Three CSVs. Column names are matched flexibly.</span></h2>
+      <div class="srcgrid" style="padding:0 8px;margin-bottom:12px">
+        ${[["ledger", "Internal ledger", "entry_id, order_ref, posted_at, type, amount, currency"], ["gateway", "Gateway settlement feed", "txn_id, merchant_ref, created, type, gross, fee, net, payout_id"], ["bank", "Bank settlement", "bank_ref, value_date, description, amount, currency"]]
+          .map(([k, l, cols]) => `<label class="drop" id="drop-${k}"><b>${l}</b><span class="muted" style="font-size:12px">${cols}</span>
+            <input type="file" accept=".csv,text/csv" data-up="${k}" style="font-size:12px"><a href="/templates/${k}.csv" download style="font-size:12px;color:var(--accent)">Download template</a></label>`).join("")}
+      </div>
+      <div class="runform"><label>As of<input type="date" id="upasof" value="${new Date().toISOString().slice(0, 10)}"></label>
+        <button class="btn primary" id="upbtn" disabled>Reconcile uploaded files</button><span class="muted" id="upmsg">Choose all three files</span></div></div>
     <div class="card"><h2>Run history</h2><div class="tbox"><table><thead><tr><th>Run</th><th>As of</th><th class="hide-sm">Bank source</th><th>Issues</th><th class="hide-sm">Started</th></tr></thead><tbody>
       ${s.runs.map(r => `<tr><td>#${r.id} <span class="muted">${esc(r.label)}</span></td><td class="num">${dayFmt(r.as_of)}</td>
         <td class="hide-sm muted">${esc((r.sources.bank || "").split(" · ")[0])}</td><td class="num">${r.stats.discrepancies}</td><td class="hide-sm muted">${when(r.created_at)}</td></tr>`).join("")}
     </tbody></table></div></div>`;
   $$("#seg button").forEach(b => b.onclick = () => { lsSet("ll_bank", b.dataset.v); $$("#seg button").forEach(x => x.classList.toggle("on", x === b)); });
+  const files = {};
+  $$("[data-up]").forEach(inp => inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return;
+    if (f.size > 5 * 1024 * 1024) { toast("Files must be under 5 MB"); inp.value = ""; return; }
+    files[inp.dataset.up] = await f.text();
+    $("#drop-" + inp.dataset.up).classList.add("ok");
+    const n = Object.keys(files).length;
+    $("#upbtn").disabled = n < 3; $("#upmsg").textContent = n < 3 ? `${n} of 3 files chosen` : "Ready";
+  });
+  $("#upbtn").onclick = async () => {
+    const btn = $("#upbtn"); btn.disabled = true; btn.textContent = "Reconciling…";
+    try {
+      const r = await post("/api/upload", { files, as_of: $("#upasof").value });
+      await refresh(); toast(`Run #${r.run_id} complete · ${r.stats.discrepancies} discrepancies`); location.hash = "#/reports";
+    } catch (e) { $("#upmsg").textContent = e.message; btn.disabled = false; btn.textContent = "Reconcile uploaded files"; }
+  };
   $("#runbtn").onclick = async () => {
     const btn = $("#runbtn"); btn.disabled = true; btn.textContent = "Running…";
     try {
@@ -596,6 +707,15 @@ async function route() {
 window.addEventListener("hashchange", () => { S.q = ""; S.tab = "disc"; route(); window.scrollTo(0, 0); });
 $("#collapse").onclick = () => { $("#app").classList.toggle("collapsed"); lsSet("ll_collapsed", $("#app").classList.contains("collapsed") ? "1" : ""); };
 if (lsGet("ll_collapsed")) $("#app").classList.add("collapsed");
+const setTheme = t => { document.documentElement.dataset.theme = t; lsSet("ll_theme", t); };
+setTheme(lsGet("ll_theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+$("#theme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, textarea, select")) return;
+  if (e.key === "/") { const q = $("#q"); if (q) { e.preventDefault(); q.focus(); } }
+  const go = { r: "#/reports", q: "#/queue", t: "#/trace", p: "#/pipeline", a: "#/audit", d: "#/sources" }[e.key];
+  if (go && !e.metaKey && !e.ctrlKey) location.hash = go;
+});
 refresh().then(route).catch(e => { $("#page").innerHTML = `<div class="empty">Could not reach the server: ${esc(e.message)}</div>`; });
 </script>
 </body>

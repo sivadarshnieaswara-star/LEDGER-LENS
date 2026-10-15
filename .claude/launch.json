@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "ledgerlens", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "ledgerlens", "up", "--no-browser"], "port": 8765 }
+  ]
+}
