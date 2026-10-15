@@ -263,6 +263,92 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 .fc-dialog .x { background: rgba(255,255,255,.18); color: #fff; float: right; }
 @keyframes fadein { from { opacity: 0; } } @keyframes pop { from { opacity: 0; transform: scale(.92) translateY(10px); } }
 @media (max-width: 960px) { .flexc { height: 360px; } }
+
+/* ================= Magic bento (How it works) ================= */
+.bento { --glow: 240, 101, 47; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(220px, auto); gap: 12px; position: relative; }
+.bento-card { position: relative; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); padding: 20px 22px;
+  display: flex; flex-direction: column; overflow: hidden; isolation: isolate; cursor: pointer;
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate(var(--tx, 0px), var(--ty, 0px));
+  transition: transform .25s ease-out, border-color .3s; opacity: 0; translate: 0 16px; }
+.bento-card.in { opacity: 1; translate: 0 0; transition: transform .25s ease-out, opacity .6s ease, translate .6s cubic-bezier(.2,.8,.2,1); }
+.bento-card::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: var(--spot, 0); transition: opacity .3s;
+  background: radial-gradient(var(--sr, 300px) circle at var(--mx, 50%) var(--my, 50%), rgba(var(--glow), .14), transparent 60%); }
+.bento-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none; opacity: var(--edge, 0);
+  background: radial-gradient(var(--sr, 300px) circle at var(--mx, 50%) var(--my, 50%), rgba(var(--glow), .95), rgba(var(--glow), .25) 35%, transparent 60%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.bento-card .lab { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .06em; }
+.bento-card h3 { margin: 0; font-size: 17px; letter-spacing: -.01em; }
+.bento-card p { margin: 3px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.bento-card .art { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; margin: 10px 0 12px; position: relative; }
+.bento-card .txt { margin-top: auto; }
+.b-ingest { grid-column: span 1; } .b-norm { grid-column: span 1; } .b-match { grid-column: span 2; grid-row: span 2; }
+.b-score { grid-column: span 2; grid-row: span 2; } .b-class { grid-column: span 1; } .b-review { grid-column: span 1; } .b-audit { grid-column: span 4; }
+.star { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: rgb(var(--glow)); box-shadow: 0 0 6px rgb(var(--glow)); pointer-events: none; z-index: 2;
+  animation: star 1.6s ease-out forwards; }
+@keyframes star { from { opacity: 0; transform: translate(0, 0) scale(.6); } 20% { opacity: 1; } to { opacity: 0; transform: translate(var(--dx), -46px) scale(1); } }
+.wave { position: absolute; border-radius: 50%; pointer-events: none; z-index: 3; background: radial-gradient(circle, rgba(var(--glow), .35), rgba(var(--glow), 0) 70%);
+  transform: translate(-50%, -50%) scale(0); animation: wave .7s ease-out forwards; }
+@keyframes wave { to { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
+/* artwork */
+.a-files { display: grid; gap: 5px; width: 100%; }
+.a-file { display: grid; grid-template-columns: 20px 1fr auto; gap: 8px; align-items: center; font-size: 12px; background: var(--row); border-radius: 8px; padding: 5px 8px; row-gap: 4px; }
+.a-file .bar { grid-column: 2 / 4; height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.a-file .bar i { display: block; height: 100%; width: 0; background: rgb(var(--glow)); animation: fill2 2.2s ease-out forwards; }
+@keyframes fill2 { to { width: 100%; } }
+.a-norm { width: 100%; display: grid; gap: 6px; font-family: var(--mono); font-size: 12px; }
+.a-norm div { display: flex; align-items: center; gap: 8px; background: var(--row); border-radius: 7px; padding: 6px 8px; }
+.a-norm span:first-child { color: var(--muted); flex: 1; }
+.a-norm b { color: rgb(var(--glow)); animation: pulse 2.4s ease-in-out infinite; }
+.a-norm div:nth-child(2) b { animation-delay: .4s } .a-norm div:nth-child(3) b { animation-delay: .8s }
+@keyframes pulse { 50% { opacity: .35; } }
+.a-match { width: 100%; display: grid; gap: 9px; }
+.a-mrow { display: grid; grid-template-columns: 170px 1fr 34px; gap: 10px; align-items: center; font-size: 13px; }
+.a-mrow .track { height: 10px; background: var(--row); border-radius: 5px; overflow: hidden; }
+.a-mrow .track i { display: block; height: 100%; border-radius: 5px; background: rgb(var(--glow)); transform-origin: left; animation: grow 1.2s cubic-bezier(.2,.8,.2,1) both; }
+.a-mrow:nth-child(n+2) .track i { background: rgba(var(--glow), .7); } .a-mrow:nth-child(n+4) .track i { background: rgba(var(--glow), .45); }
+@keyframes grow { from { transform: scaleX(0); } }
+.a-pair { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 4px; }
+.a-pair .chip { background: var(--row); border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; font-family: var(--mono); }
+.a-pair .ln { flex: 1; height: 2px; background: linear-gradient(90deg, transparent, rgb(var(--glow)), transparent); background-size: 200% 100%; animation: flow 1.8s linear infinite; }
+@keyframes flow { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.a-score { width: 100%; display: grid; gap: 10px; }
+.a-score .row { display: grid; grid-template-columns: 150px 1fr 40px; gap: 10px; align-items: center; font-size: 13px; }
+.a-score .row .t { height: 12px; border-radius: 6px; background: var(--row); position: relative; overflow: hidden; }
+.a-score .row .t i { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: rgb(var(--glow)); animation: grow 1.4s cubic-bezier(.2,.8,.2,1) both; transform-origin: left; }
+.a-score .row .t s { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: var(--line); }
+.a-score .total { display: flex; align-items: baseline; gap: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+.a-score .total b { font-size: 34px; letter-spacing: -.02em; }
+.a-score .verdict { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--med); background: var(--med-soft); padding: 4px 10px; border-radius: 999px; }
+.a-donut { display: flex; align-items: center; gap: 16px; }
+.a-donut .legend2 { display: grid; gap: 4px; font-size: 12px; }
+.a-donut .legend2 i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.a-donut svg circle { transition: stroke-dasharray 1.2s cubic-bezier(.2,.8,.2,1); }
+.a-tog { display: grid; gap: 8px; width: 100%; }
+.a-tog div { display: flex; align-items: center; gap: 10px; background: var(--row); border-radius: 10px; padding: 8px 10px; font-size: 13px; font-weight: 500; }
+.a-tog .sw { margin-left: auto; width: 34px; height: 20px; border-radius: 10px; background: var(--line); position: relative; transition: background .3s; }
+.a-tog .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .3s; }
+.a-tog .sw.on { background: rgb(var(--glow)); } .a-tog .sw.on::after { transform: translateX(14px); }
+.a-chain { display: flex; align-items: center; gap: 0; width: 100%; overflow: hidden; }
+.a-block { flex: 1 1 0; min-width: 0; background: var(--row); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 12px; opacity: 0; animation: blk .5s ease forwards; }
+.a-block b { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-block code { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.a-block code em { font-style: normal; color: rgb(var(--glow)); }
+.a-link { width: 22px; flex: none; height: 2px; background: rgb(var(--glow)); opacity: .6; }
+@keyframes blk { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 1000px) {
+  .bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: auto; }
+  .bento-card { min-height: 200px; }
+  .b-match, .b-score, .b-audit { grid-column: span 2; grid-row: auto; }
+  .b-audit .a-block:nth-child(n+6) { display: none; }
+}
+@media (max-width: 620px) {
+  .bento { grid-template-columns: 1fr; }
+  .bento-card, .b-match, .b-score, .b-audit { grid-column: auto; }
+  .a-mrow { grid-template-columns: 120px 1fr 28px; } .a-score .row { grid-template-columns: 110px 1fr 36px; }
+  .a-chain { flex-direction: column; align-items: stretch; } .a-link { width: 2px; height: 10px; margin-left: 20px; }
+  .b-audit .a-block:nth-child(n+4) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .bento-card, .bento-card.in { transition: none; translate: 0 0; opacity: 1; } .star, .wave { display: none; } }
 @media (prefers-reduced-motion: reduce) { .fc-panel, .fc-body, .hc-row, .hc-result { transition: none; animation: none; } }
 @media (max-width: 900px) { .buckets { grid-template-columns: 1fr 1fr; } .frow { grid-template-columns: 110px 1fr 44px; } }
 @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } .kbar { grid-template-columns: 110px 1fr 28px; } }
@@ -941,6 +1027,113 @@ async function pageAudit() {
 }
 
 
+
+/* ================= Magic bento ================= */
+function bentoHTML(run, st, ing) {
+  const det = run?.pipeline?.deterministic || {}, pr = run?.pipeline?.probabilistic || {};
+  const methods = Object.entries(st.matches?.by_method || {}).sort((a, b) => b[1] - a[1]);
+  const maxM = Math.max(1, ...methods.map(m => m[1]));
+  const files = [
+    ["ledger", "Internal ledger", ing.ledger],
+    ...(ing.gateways || ["Gateway"]).map(g => ["gateway", g, null]),
+    ...(ing.bank_accounts || ["Bank"]).map(b => ["bank", b, null]),
+  ].slice(0, 5);
+  const icon = k => ({ ledger: '<span class="ico ledger">.csv</span>', gateway: '<span class="ico gateway">G</span>', bank: '<span class="ico bank">B</span>' })[k];
+  const cand = S.exceptions.find(e => e.fingerprint === "MISSING_IN_GATEWAY:JE-5033")?.candidates?.[0]
+    || S.exceptions.find(e => e.candidates?.length)?.candidates?.[0];
+  const factors = cand?.factors || [{ factor: "Amount", weight: .55, score: .75, contribution: .41 }, { factor: "Date proximity", weight: .3, score: 1, contribution: .3 }, { factor: "Reference similarity", weight: .15, score: .14, contribution: .02 }];
+  const total = cand?.score ?? factors.reduce((t, f) => t + f.contribution, 0);
+  const sev = st.by_severity || {}, sevTot = (sev.high || 0) + (sev.medium || 0) + (sev.low || 0) || 1;
+  const C = 2 * Math.PI * 34; let accum = 0;
+  const arc = (n, col) => { const len = n / sevTot * C; const el = `<circle r="34" cx="44" cy="44" fill="none" stroke="${col}" stroke-width="12" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-accum}" transform="rotate(-90 44 44)"/>`; accum += len; return el; };
+  const review = S.summary?.review || {};
+  const L = (n, t, d, cls, art, href) => `<div class="bento-card ${cls}" data-href="${href}" tabindex="0" role="link" aria-label="${esc(t)}">
+      <span class="lab">${n}</span><div class="art">${art}</div><div class="txt"><h3>${esc(t)}</h3><p>${d}</p></div></div>`;
+  return `<div class="bento" id="bento">
+    ${L("01 · INGEST", "Ingest every source", `${ing.ledger + ing.gateway + ing.bank || 0} records from ${(ing.gateways || []).length + (ing.bank_accounts || []).length + 1} feeds, via CSV or the bank API`, "b-ingest",
+      `<div class="a-files">${files.map(([k, name], i) => `<div class="a-file">${icon(k)}<span>${esc(name)}</span><span class="muted">${k}</span><span class="bar"><i style="animation-delay:${i * .25}s"></i></span></div>`).join("")}</div>`, "#/sources")}
+    ${L("02 · NORMALISE", "Normalise & dedupe", `${ing.references_normalised ?? "–"} references cleaned, ${ing.duplicates_removed ?? 0} duplicates removed`, "b-norm",
+      `<div class="a-norm"><div><span>ORD-01001</span>→<b>1001</b></div><div><span>ord_1001</span>→<b>1001</b></div><div><span>order #1001</span>→<b>1001</b></div></div>`, "#/trace")}
+    ${L("03 · MATCH", "Five matching strategies", `Exact, composite and aggregate first: ${(det.ledger_gateway || 0) + (det.gateway_bank || 0)} exact, ${(det.one_to_many || 0) + (det.many_to_one || 0)} one-to-many or many-to-one, ${det.composite || 0} composite, ${pr.aggregate || 0} aggregate.`, "b-match",
+      `<div style="width:100%"><div class="a-pair"><span class="chip">JE-5055 + JE-5056 + JE-5057</span><span class="ln"></span><span class="chip">ps_txn_cart77</span></div>
+       <div class="a-pair" style="margin-bottom:14px"><span class="chip">PS-STL-01</span><span class="ln"></span><span class="chip">HB-1101 + HB-1102</span></div>
+       <div class="a-match">${methods.slice(0, 6).map(([m, n], i) => `<div class="a-mrow"><span>${esc(m)}</span><span class="track"><i style="width:${n / maxM * 100}%;animation-delay:${i * .08}s"></i></span><b class="num r">${n}</b></div>`).join("")}</div></div>`,
+      `#/reports/${run?.id || 1}/ledger_gateway`)}
+    ${L("04 · SCORE", "Explainable confidence", `Whatever is left is scored factor by factor. ${cand ? `This is the real ${esc(cand.id)} candidate: ` : ""}below 80% it goes to a human, not an auto-match.`, "b-score",
+      `<div class="a-score">${factors.filter(f => f.weight > 0).map((f, i) => `<div class="row"><span>${esc(f.factor)} <span class="muted">×${f.weight}</span></span>
+         <span class="t"><s style="width:${f.weight * 100}%"></s><i style="width:${f.contribution * 100}%;animation-delay:${i * .15}s"></i></span><b class="num r">+${Math.round(f.contribution * 100)}</b></div>`).join("")}
+       <div class="total"><b class="num" data-count="${Math.round(total * 100)}">0%</b><span class="muted">confidence</span><span class="verdict">${total >= .8 ? "auto-matched" : "sent to review"}</span></div></div>`, "#/queue")}
+    ${L("05 · CLASSIFY", "21 discrepancy types", `${st.discrepancies ?? 0} found this run, each with a cause and next step`, "b-class",
+      `<div class="a-donut"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true"><circle r="34" cx="44" cy="44" fill="none" stroke="var(--row)" stroke-width="12"/>${arc(sev.high || 0, "var(--high)")}${arc(sev.medium || 0, "var(--med)")}${arc(sev.low || 0, "var(--low)")}
+        <text x="44" y="50" text-anchor="middle" font-size="18" font-weight="700" fill="currentColor">${st.discrepancies ?? 0}</text></svg>
+        <div class="legend2"><span><i style="background:var(--high)"></i>${sev.high || 0} high</span><span><i style="background:var(--med)"></i>${sev.medium || 0} medium</span><span><i style="background:var(--low)"></i>${sev.low || 0} low</span></div></div>`, "#/queue")}
+    ${L("06 · REVIEW", "Maker-checker approval", `High-severity or $100+ closures need a second reviewer. ${review.manual_links || 0} reviewer-confirmed links so far.`, "b-review",
+      `<div class="a-tog"><div>✎ Maker resolves<span class="sw on"></span></div><div>✓ Checker approves<span class="sw" data-flip></span></div></div>`, "#/approvals")}
+    ${L("07 · AUDIT", "Hash-chained audit trail", `<span id="bento-audit">${S.summary?.audit?.events ?? 0} events, ${S.summary?.audit?.ok ? "chain verified intact" : "chain broken"}</span>: every detection and decision is SHA-256 linked to the one before`, "b-audit",
+      `<div class="a-chain" id="bento-chain"></div>`, "#/audit")}
+  </div>`;
+}
+
+function mountBento() {
+  const grid = $("#bento"); if (!grid) return;
+  const cards = $$(".bento-card", grid);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const SR = 300;
+  // staggered entrance once visible
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    cards.forEach((c, i) => setTimeout(() => c.classList.add("in"), reduce ? 0 : i * 80));
+    const num = $("[data-count]", grid);
+    if (num) { const to = +num.dataset.count, t0 = performance.now(); const tick = now => { const k = Math.min(1, (now - t0) / 1200); num.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))) + "%"; if (k < 1) requestAnimationFrame(tick); }; requestAnimationFrame(tick); }
+    setTimeout(() => $("[data-flip]", grid)?.classList.add("on"), reduce ? 0 : 1400);
+    io.disconnect();
+  }), { threshold: 0.15 });
+  io.observe(grid);
+  // edge light across all cards near the cursor + spotlight, tilt, magnetism, stars in the hovered one
+  let lastStar = 0;
+  grid.addEventListener("pointermove", e => {
+    if (!fine) return;
+    for (const c of cards) {
+      const r = c.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      const dx = Math.max(r.left - e.clientX, 0, e.clientX - r.right), dy = Math.max(r.top - e.clientY, 0, e.clientY - r.bottom);
+      const dist = Math.hypot(dx, dy), inside = dist === 0;
+      c.style.setProperty("--mx", x + "px"); c.style.setProperty("--my", y + "px"); c.style.setProperty("--sr", SR + "px");
+      c.style.setProperty("--edge", Math.max(0, 1 - dist / (SR * 0.6)).toFixed(3));
+      c.style.setProperty("--spot", inside ? 1 : 0);
+      if (inside && !reduce) {
+        const nx = x / r.width - 0.5, ny = y / r.height - 0.5;
+        c.style.setProperty("--rx", (-ny * 6).toFixed(2) + "deg"); c.style.setProperty("--ry", (nx * 6).toFixed(2) + "deg");
+        c.style.setProperty("--tx", (nx * 6).toFixed(1) + "px"); c.style.setProperty("--ty", (ny * 6).toFixed(1) + "px");
+        const now = performance.now();
+        if (now - lastStar > 70 && c.querySelectorAll(".star").length < 24) {
+          lastStar = now;
+          const st = document.createElement("span"); st.className = "star";
+          st.style.left = x + (Math.random() - .5) * 60 + "px"; st.style.top = y + (Math.random() - .5) * 30 + "px";
+          st.style.setProperty("--dx", (Math.random() - .5) * 30 + "px");
+          st.addEventListener("animationend", () => st.remove()); c.append(st);
+        }
+      } else { c.style.setProperty("--rx", "0deg"); c.style.setProperty("--ry", "0deg"); c.style.setProperty("--tx", "0px"); c.style.setProperty("--ty", "0px"); }
+    }
+  });
+  grid.addEventListener("pointerleave", () => cards.forEach(c => { for (const k of ["--edge", "--spot"]) c.style.setProperty(k, 0); for (const k of ["--rx", "--ry"]) c.style.setProperty(k, "0deg"); for (const k of ["--tx", "--ty"]) c.style.setProperty(k, "0px"); }));
+  // click wave, then navigate
+  cards.forEach(c => {
+    const go = (x, y) => {
+      if (!reduce) { const r = c.getBoundingClientRect(), w = document.createElement("span"); const size = Math.hypot(r.width, r.height) * 2;
+        w.className = "wave"; w.style.left = x + "px"; w.style.top = y + "px"; w.style.width = w.style.height = size + "px"; c.append(w); w.addEventListener("animationend", () => w.remove()); }
+      setTimeout(() => location.hash = c.dataset.href, reduce ? 0 : 320);
+    };
+    c.addEventListener("click", e => { const r = c.getBoundingClientRect(); go(e.clientX - r.left, e.clientY - r.top); });
+    c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(c.clientWidth / 2, c.clientHeight / 2); } });
+  });
+  // live hash chain from the audit trail
+  api("/api/audit?limit=6").then(a => {
+    const chain = $("#bento-chain"); if (!chain) return;
+    chain.innerHTML = a.log.slice().reverse().map((ev, i) => `${i ? '<span class="a-link"></span>' : ""}<div class="a-block" style="animation-delay:${i * .12}s">
+      <b>${esc(ev.actor)} · ${esc(ev.action.replace("_", " "))}</b><code>prev <em>${esc(ev.prev_hash.slice(0, 6))}</em> → ${esc(ev.hash.slice(0, 6))}</code></div>`).join("");
+  }).catch(() => {});
+}
 /* ================= Landing page ================= */
 const FEATURES = [
   { t: "Advanced matching", g: "linear-gradient(150deg,#d64511,#8f2a06)", i: "trace",
@@ -1359,16 +1552,8 @@ function pageLanding() {
   <section class="l-sec" id="l-how"><div class="l-wrap">
     <span class="eyebrow">How it works</span>
     <h2>From three files to one explained answer.</h2>
-    <p class="sub">Each stage narrows what's left for the next, and everything ends up in an audit trail.</p>
-    <div class="flow">
-      <div><b>Ingest</b>CSV feeds or the bank API: any number of gateways and accounts</div>
-      <div><b>Normalise</b>Column aliases, cents, dates; references and duplicates cleaned</div>
-      <div><b>Match</b>Exact → composite → aggregate (1:N / N:1)</div>
-      <div><b>Score</b>Probabilistic candidates with explainable factors</div>
-      <div><b>Classify</b>21 discrepancy types with severity and cause</div>
-      <div><b>Review</b>Exception queue, maker-checker approvals</div>
-      <div><b>Audit</b>SHA-256 hash-chained, append-only history</div>
-    </div>
+    <p class="sub">Each stage narrows what's left for the next, and everything ends up in an audit trail. Every card shows real numbers from the latest run. Hover around, then click a card to jump in.</p>
+    ${bentoHTML(run, st, ing)}
     <div style="margin-top:16px"><a class="btn" href="#/pipeline">See the live pipeline diagram →</a></div>
   </div></section>
 
@@ -1403,6 +1588,7 @@ function pageLanding() {
   fcInst?.destroy();
   fcInst = CircularCarousel($("#flexc"), FEATURES, { label: "LedgerLens features", onSelect: i => openFeature(i, lastRun) });
 
+  mountBento();
   $$("[data-scroll]").forEach(a => a.onclick = e => { e.preventDefault(); document.querySelector(a.getAttribute("href"))?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
   $("#ltheme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 }
