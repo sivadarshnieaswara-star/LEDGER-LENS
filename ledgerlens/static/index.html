@@ -234,8 +234,8 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
   .fc-body h3 { font-size: 22px; }
 }
 
-/* FlexCarousel */
-.flexc { position: relative; height: 620px; outline: none; cursor: grab; touch-action: pan-y; user-select: none;
+/* CircularCarousel */
+.flexc { position: relative; height: 520px; outline: none; cursor: grab; touch-action: pan-y; user-select: none;
   margin: 0 calc(50% - 50vw); width: 100vw; overflow: hidden; }
 .flexc.grabbing { cursor: grabbing; }
 .flexc:focus-visible { box-shadow: inset 0 0 0 3px var(--accent); }
@@ -248,7 +248,7 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 .flexc:hover .flexc-nav, .flexc:focus-within .flexc-nav { opacity: 1; }
 .flexc-nav.prev { left: max(16px, calc(50vw - 600px)); } .flexc-nav.next { right: max(16px, calc(50vw - 600px)); }
 .flexc-fallback .flexc-row { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 20px 24px 80px; height: 100%; }
-.flexc-fallback .flexc-card { height: 100%; width: auto; border-radius: 18px; scroll-snap-align: center; flex: none; cursor: pointer; }
+.flexc-fallback .flexc-card { height: 70%; width: auto; border-radius: 18px; scroll-snap-align: center; flex: none; cursor: pointer; }
 .fc-dialog { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(10,10,12,.55); backdrop-filter: blur(6px); animation: fadein .25s; }
 .fc-dialog .box { width: min(640px, 100%); max-height: calc(100vh - 32px); overflow: auto; border-radius: 20px; color: #fff; background: var(--g); box-shadow: 0 30px 80px rgba(0,0,0,.4); animation: pop .35s cubic-bezier(.2,.9,.3,1.2); }
 .fc-dialog .inner { padding: 32px; }
@@ -262,7 +262,7 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 .fc-dialog .demo a { background: #fff; color: #111; padding: 9px 14px; border-radius: 9px; font-weight: 600; text-decoration: none; }
 .fc-dialog .x { background: rgba(255,255,255,.18); color: #fff; float: right; }
 @keyframes fadein { from { opacity: 0; } } @keyframes pop { from { opacity: 0; transform: scale(.92) translateY(10px); } }
-@media (max-width: 960px) { .flexc { height: 520px; } }
+@media (max-width: 960px) { .flexc { height: 360px; } }
 @media (prefers-reduced-motion: reduce) { .fc-panel, .fc-body, .hc-row, .hc-result { transition: none; animation: none; } }
 @media (max-width: 900px) { .buckets { grid-template-columns: 1fr 1fr; } .frow { grid-template-columns: 110px 1fr 44px; } }
 @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } .kbar { grid-template-columns: 110px 1fr 28px; } }
@@ -1012,70 +1012,99 @@ function svgImage(markup) {
   });
 }
 async function drawCard(f, i, n) {
-  const W = 720, H = 960, c = document.createElement("canvas"); c.width = W; c.height = H;
+  // landscape card: title + description on the left, key points on the right
+  const W = 1080, H = 720, c = document.createElement("canvas"); c.width = W; c.height = H;
   const x = c.getContext("2d"), [a, b] = hexPair(f.g);
   const grd = x.createLinearGradient(0, 0, W, H); grd.addColorStop(0, a); grd.addColorStop(1, b);
   x.fillStyle = grd; x.fillRect(0, 0, W, H);
-  // soft light blobs for depth
-  for (const [cx, cy, r, al] of [[W * .85, H * .12, 360, .18], [W * .1, H * .95, 420, .14], [W * .6, H * .55, 260, .07]]) {
+  for (const [cx, cy, r, al] of [[W * .9, H * .1, 420, .18], [W * .05, H * .95, 460, .13], [W * .55, H * .5, 300, .06]]) {
     const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, `rgba(255,255,255,${al})`); rg.addColorStop(1, "rgba(255,255,255,0)");
     x.fillStyle = rg; x.fillRect(0, 0, W, H);
   }
   const font = (w, s) => `${w} ${s}px Figtree, -apple-system, "Segoe UI", sans-serif`;
-  x.fillStyle = "rgba(255,255,255,.75)"; x.font = font(700, 26); x.fillText(String(i + 1).padStart(2, "0") + " / " + String(n).padStart(2, "0"), 56, 84);
-  x.textAlign = "right"; x.fillText("LEDGERLENS", W - 56, 84); x.textAlign = "left";
-  x.fillStyle = "rgba(255,255,255,.16)"; x.beginPath(); x.roundRect(56, 130, 120, 120, 28); x.fill();
-  const icon = await svgImage(ICON[f.i] || ""); if (icon) x.drawImage(icon, 80, 154, 72, 72);
-  x.fillStyle = "#fff"; x.font = font(700, 62);
-  let y = 340; for (const l of wrapText(x, f.t, W - 112).slice(0, 3)) { x.fillText(l, 56, y); y += 70; }
-  x.font = font(400, 29); x.fillStyle = "rgba(255,255,255,.9)"; y += 10;
-  for (const l of wrapText(x, f.d, W - 112).slice(0, 4)) { x.fillText(l, 56, y); y += 42; }
-  x.font = font(500, 25); x.fillStyle = "rgba(255,255,255,.82)"; y += 18;
-  for (const bl of f.b.slice(0, 4)) { const ls = wrapText(x, "→  " + bl, W - 112).slice(0, 2); for (const l of ls) { if (y > H - 130) break; x.fillText(l, 56, y); y += 34; } y += 6; }
-  x.fillStyle = "rgba(0,0,0,.22)"; x.beginPath(); x.roundRect(40, H - 112, W - 80, 72, 18); x.fill();
-  x.fillStyle = "#fff"; x.font = font(600, 26); x.fillText("Click to explore  →", 72, H - 66);
+  const L = 56, mid = 600;
+  x.fillStyle = "rgba(255,255,255,.75)"; x.font = font(700, 24);
+  x.fillText(String(i + 1).padStart(2, "0") + " / " + String(n).padStart(2, "0"), L, 72);
+  x.textAlign = "right"; x.fillText("LEDGERLENS", W - L, 72); x.textAlign = "left";
+  x.fillStyle = "rgba(255,255,255,.16)"; x.beginPath(); x.roundRect(L, 110, 104, 104, 24); x.fill();
+  const icon = await svgImage(ICON[f.i] || ""); if (icon) x.drawImage(icon, L + 20, 130, 64, 64);
+  x.fillStyle = "#fff"; x.font = font(700, 54);
+  let y = 290; for (const l of wrapText(x, f.t, mid - L - 30).slice(0, 2)) { x.fillText(l, L, y); y += 62; }
+  x.font = font(400, 26); x.fillStyle = "rgba(255,255,255,.9)"; y += 6;
+  for (const l of wrapText(x, f.d, mid - L - 30).slice(0, 5)) { x.fillText(l, L, y); y += 37; }
+  // right column: key points
+  x.fillStyle = "rgba(0,0,0,.18)"; x.beginPath(); x.roundRect(mid, 110, W - mid - L, 470, 22); x.fill();
+  x.fillStyle = "rgba(255,255,255,.7)"; x.font = font(700, 19); x.fillText("KEY POINTS", mid + 30, 152);
+  x.font = font(500, 24); x.fillStyle = "#fff"; let yy = 196;
+  for (const bl of f.b.slice(0, 4)) {
+    for (const [k, l] of wrapText(x, bl, W - mid - L - 90).slice(0, 3).entries()) { if (k === 0) x.fillText("→", mid + 30, yy); x.fillText(l, mid + 64, yy); yy += 32; }
+    yy += 14; if (yy > 560) break;
+  }
+  x.fillStyle = "rgba(0,0,0,.22)"; x.beginPath(); x.roundRect(L - 16, H - 104, W - 2 * L + 32, 66, 16); x.fill();
+  x.fillStyle = "#fff"; x.font = font(600, 24);
+  const demo = wrapText(x, f.demo[0], W - 2 * L - 260)[0];
+  x.fillText(demo, L + 12, H - 62);
+  x.textAlign = "right"; x.fillText("Click to explore  →", W - L - 4, H - 62); x.textAlign = "left";
   return c;
 }
 
-const FC_VS = `attribute vec2 a_uv;
-uniform vec2 u_res; uniform float u_cx; uniform vec2 u_size; uniform float u_lens; uniform float u_reach;
-uniform float u_bend; uniform float u_scale; uniform float u_rise; uniform float u_open;
-varying vec2 v_uv; varying float v_bend;
+/* ================= CircularCarousel =================
+   A 3D ring of cards. Cards bend to follow the cylinder, far cards fade
+   into the page colour, inside faces show through shaded. It drifts,
+   eases to a stop under the pointer and settles on a card; it can be
+   thrown with momentum, swells when spun fast, leans toward the pointer,
+   and clicking a card turns it to the front. WebGL, no dependencies;
+   original implementation. */
+const CC_VS = `attribute vec2 a_uv;
+uniform vec2 u_res; uniform float u_R; uniform float u_theta; uniform vec2 u_size; uniform float u_curve;
+uniform float u_tilt; uniform float u_yaw; uniform float u_persp; uniform float u_scale; uniform float u_rise;
+varying vec2 v_uv; varying float v_away;
 void main() {
-  vec2 p = vec2(u_cx + (a_uv.x - 0.5) * u_size.x, (0.5 - a_uv.y) * u_size.y) * u_scale;
-  float ax = abs(p.x), s = sign(p.x);
-  float t = clamp((ax - u_lens) / u_reach, 0.0, 1.0);
-  float f = t * t * (3.0 - 2.0 * t) * (1.0 - u_open);
-  float beyond = max(ax - u_lens - u_reach, 0.0) / u_reach * (1.0 - u_open);
-  float k = f + beyond * 0.55;
-  p.y *= 1.0 + 0.32 * k;                         // glass magnifies toward its rim
-  p.y += s * u_bend * k;                         // twist: left end down, right end up
-  p.x = s * (min(ax, u_lens) + max(ax - u_lens, 0.0) * (1.0 - 0.28 * f));   // compress past the rim
-  p.y += u_rise;
-  gl_Position = vec4(p / (u_res * 0.5), 0.0, 1.0);
-  v_uv = a_uv; v_bend = clamp(k, 0.0, 1.5);
+  float y = (0.5 - a_uv.y) * u_size.y + u_rise;
+  float off = (a_uv.x - 0.5) * u_size.x;
+  float phi = u_theta + off / u_R;
+  vec3 bent = vec3(u_R * sin(phi), y, u_R * cos(phi));
+  vec3 flatP = vec3(u_R * sin(u_theta) + cos(u_theta) * off, y, u_R * cos(u_theta) - sin(u_theta) * off);
+  vec3 p = mix(flatP, bent, u_curve);
+  float cy = cos(u_yaw), sy = sin(u_yaw);
+  p = vec3(cy * p.x + sy * p.z, p.y, -sy * p.x + cy * p.z);
+  float ct = cos(u_tilt), st = sin(u_tilt);
+  p = vec3(p.x, ct * p.y - st * p.z, st * p.y + ct * p.z);
+  p.z -= u_R;
+  float s = u_persp / (u_persp - p.z);
+  gl_Position = vec4(p.xy * s * u_scale / (u_res * 0.5), 0.0, 1.0);
+  v_uv = a_uv; v_away = 0.5 - 0.5 * cos(phi + u_yaw);
 }`;
-const FC_FS = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+const CC_FS = `#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
 precision mediump float;
 #endif
-uniform sampler2D u_tex; uniform vec2 u_size; uniform float u_radius; uniform float u_disp; uniform float u_alpha;
-varying vec2 v_uv; varying float v_bend;
+uniform sampler2D u_tex; uniform vec2 u_size; uniform float u_radius; uniform float u_alpha;
+uniform vec3 u_fade; uniform float u_depthFade; uniform float u_inner; uniform float u_frontSign;
+varying vec2 v_uv; varying float v_away;
 void main() {
-  vec2 o = vec2(u_disp * v_bend * 0.014, u_disp * v_bend * 0.004);
-  vec3 col = vec3(texture2D(u_tex, v_uv + o).r, texture2D(u_tex, v_uv).g, texture2D(u_tex, v_uv - o).b);
-  col *= 1.0 - 0.18 * min(v_bend, 1.0);
+  bool front = (u_frontSign > 0.0) == gl_FrontFacing;
+  vec3 col = texture2D(u_tex, v_uv).rgb;
+  if (!front) col *= u_inner;
+  col = mix(col, u_fade, clamp(v_away * u_depthFade * 1.35, 0.0, 0.92));
   vec2 q = abs(v_uv - 0.5) * u_size - (u_size * 0.5 - u_radius);
   float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_radius;
   float a = (1.0 - smoothstep(-1.0, 1.0, d)) * u_alpha;
   gl_FragColor = vec4(col * a, a);
 }`;
 
-function FlexCarousel(root, items, opts = {}) {
-  const o = Object.assign({ cardHeight: 0.66, gap: 16, radius: 18, lens: 0.36, reach: 0.2, bend: 0.16, dispersion: 1,
-    squeeze: 0.18, autoplay: true, interval: 4, onSelect: () => {}, onChange: () => {} }, opts);
-  const n = items.length;
+function cssColor(name) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const m = v.match(/^#([0-9a-f]{6})$/i);
+  return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) / 255) : [0.06, 0.06, 0.07];
+}
+
+function CircularCarousel(root, items, opts = {}) {
+  const o = Object.assign({ cardWidth: 330, gap: 28, curve: 1, tilt: -3, perspective: 2400, speed: 12, momentum: 0.6,
+    parallax: 0.3, stretch: 0.5, depthFade: 0.55, innerShade: 0.6, radius: 16, onSelect: () => {}, onChange: () => {} }, opts);
+  const n = items.length, alpha = (Math.PI * 2) / n, ch0 = o.cardWidth * 2 / 3;
+  const R0 = n * (o.cardWidth + o.gap) / (Math.PI * 2);
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   root.classList.add("flexc"); root.tabIndex = 0; root.setAttribute("role", "region");
   root.setAttribute("aria-roledescription", "carousel"); root.setAttribute("aria-label", opts.label || "Carousel");
@@ -1084,130 +1113,170 @@ function FlexCarousel(root, items, opts = {}) {
     <button class="flexc-nav prev" aria-label="Previous">‹</button><button class="flexc-nav next" aria-label="Next">›</button>`;
   const canvas = root.querySelector("canvas"), titleEl = root.querySelector(".flexc-title"), countEl = root.querySelector(".flexc-count");
   const gl = canvas.getContext("webgl", { premultipliedAlpha: true, antialias: true, alpha: true });
-  let destroyed = false, raf = 0, timer = 0;
-
-  // ---------- state
-  let W = 0, H = 0, cw = 0, ch = 0, step = 1;
-  let pos = 0, target = 0, vel = 0, last = 0, hover = false, dragging = false, downX = 0, downPos = 0, moved = 0;
-  let introStart = 0, introT = reduce ? 1 : 0, openT = 0, current = -1, wheelTimer = 0;
-  const idxAt = p => ((Math.round(p / step) % n) + n) % n;
-  const snap = p => Math.round(p / step) * step;
-
-  function layout() {
+  let W = 0, H = 0, fit = 1, destroyed = false, raf = 0;
+  const setCaption = i => { titleEl.textContent = items[i].t; countEl.textContent = `${i + 1} of ${n}`; };
+  const ro = new ResizeObserver(() => {
     const r = root.getBoundingClientRect(); W = r.width; H = r.height;
-    ch = Math.min(H * o.cardHeight, 560); cw = ch * 0.75; step = cw + o.gap;
+    fit = W < 760 ? Math.min(1, (W * 0.74) / o.cardWidth)   // phones: front card fills the width, ring runs off the sides
+      : Math.min(1, (W * 0.98) / (2 * R0 + o.cardWidth * 0.6), (H * 0.8) / (ch0 + R0 * 0.2));
     const dpr = Math.min(devicePixelRatio || 1, 2);
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     canvas.style.width = W + "px"; canvas.style.height = H + "px";
-    if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
-    pos = snap(pos); target = pos;
-  }
-  const ro = new ResizeObserver(layout); ro.observe(root);
+    gl && gl.viewport(0, 0, canvas.width, canvas.height);
+  });
+  ro.observe(root);
 
-  // ---------- fallback (no WebGL): native scroll-snap row of the same cards
-  if (!gl) {
+  if (!gl) {   // no WebGL: swipeable row of the same cards
     root.classList.add("flexc-fallback");
     Promise.all(items.map((f, i) => drawCard(f, i, n))).then(cs => {
       const row = document.createElement("div"); row.className = "flexc-row";
       cs.forEach((c, i) => { c.className = "flexc-card"; c.onclick = () => o.onSelect(i); row.append(c); });
       root.prepend(row); setCaption(0);
     });
-    function setCaption(i) { titleEl.textContent = items[i].t; countEl.textContent = `${String(i + 1).padStart(2, "0")} / ${String(n).padStart(2, "0")}`; }
-    return { destroy() { ro.disconnect(); } };
+    return { setOpen() {}, destroy() { ro.disconnect(); } };
   }
 
-  // ---------- GL setup
-  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+  const sh = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); return s; };
   const prog = gl.createProgram();
-  gl.attachShader(prog, sh(gl.VERTEX_SHADER, FC_VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FC_FS)); gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) console.warn("FlexCarousel: shader link failed", gl.getProgramInfoLog(prog));
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, CC_VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, CC_FS)); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) console.warn("CircularCarousel: shader link failed", gl.getProgramInfoLog(prog));
   gl.useProgram(prog);
-  const SEG = 28, uv = [], idx = [];
-  for (let y = 0; y <= SEG; y++) for (let x = 0; x <= SEG; x++) uv.push(x / SEG, y / SEG);
-  for (let y = 0; y < SEG; y++) for (let x = 0; x < SEG; x++) { const a = y * (SEG + 1) + x, b = a + 1, c = a + SEG + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const SEG = 24, uv = [], idx = [];
+  for (let y = 0; y <= 2; y++) for (let x = 0; x <= SEG; x++) uv.push(x / SEG, y / 2);
+  for (let y = 0; y < 2; y++) for (let x = 0; x < SEG; x++) { const a = y * (SEG + 1) + x, b = a + 1, c = a + SEG + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uv), gl.STATIC_DRAW);
   const loc = gl.getAttribLocation(prog, "a_uv"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
-  const U = {}; for (const k of ["u_res", "u_cx", "u_size", "u_lens", "u_reach", "u_bend", "u_scale", "u_rise", "u_open", "u_tex", "u_radius", "u_disp", "u_alpha"]) U[k] = gl.getUniformLocation(prog, k);
+  const U = {};
+  for (const k of ["u_res", "u_R", "u_theta", "u_size", "u_curve", "u_tilt", "u_yaw", "u_persp", "u_scale", "u_rise", "u_tex",
+    "u_radius", "u_alpha", "u_fade", "u_depthFade", "u_inner", "u_frontSign"]) U[k] = gl.getUniformLocation(prog, k);
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   const textures = new Array(n).fill(null);
   items.forEach((f, i) => drawCard(f, i, n).then(c => {
     if (destroyed) return;
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    for (const [p, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, p, v);
     textures[i] = t;
   }));
+  let fade = cssColor("--canvas");
+  const mo = new MutationObserver(() => { fade = cssColor("--canvas"); });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
-  // ---------- render loop
+  // ---------- motion state (angles in radians; card i sits at i*alpha + rot)
+  let rot = 0, vel = reduce ? 0 : -o.speed * Math.PI / 180, hover = false, dragging = false, focusTo = null, holdUntil = 0;
+  let downX = 0, downRot = 0, moved = 0, lastX = 0, lastT = 0, dragVel = 0, yaw = 0, pitch = 0, yawT = 0, pitchT = 0;
+  let last = 0, start = 0, current = -1, openT = 0;
+  const drift = -o.speed * Math.PI / 180 * (reduce ? 0 : 1);
+  const frontIdx = r => ((Math.round(-r / alpha) % n) + n) % n;
+  const nearest = r => Math.round(r / alpha) * alpha;
   const ease = t => 1 - Math.pow(1 - Math.min(Math.max(t, 0), 1), 3);
+
   function frame(now) {
     if (destroyed) return;
-    const dt = Math.min(0.25, (now - (last || now)) / 1000); last = now;
-    if (!dragging) pos += (target - pos) * (1 - Math.pow(0.0009, dt));
-    const speed = Math.abs(pos - (frame.prev ?? pos)) / Math.max(dt, 1 / 120); frame.prev = pos;
-    vel += (Math.min(speed / 2200, 1) - vel) * 0.15;
-    if (introT < 1) { introStart = introStart || now; introT = Math.min(1, (now - introStart) / 1400); }
-    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.uniform2f(U.u_res, W, H); gl.uniform2f(U.u_size, cw, ch);
-    gl.uniform1f(U.u_lens, W * o.lens); gl.uniform1f(U.u_reach, W * o.reach);
-    gl.uniform1f(U.u_bend, H * o.bend); gl.uniform1f(U.u_radius, o.radius); gl.uniform1f(U.u_disp, o.dispersion);
-    gl.uniform1f(U.u_open, 0);
-    const L = n * step, centerIdx = Math.round(pos / step);
-    const draws = [];
-    for (let k = -Math.ceil(W / step) - 2; k <= Math.ceil(W / step) + 2; k++) {
-      const i = centerIdx + k, cx = i * step - pos, item = ((i % n) + n) % n;
-      draws.push({ cx, item, rank: Math.abs(k) });
+    const dt = Math.min(0.25, (now - (last || now)) / 1000); last = now; start = start || now;
+    const intro = reduce ? 1 : Math.min(1, (now - start) / 1600);
+    if (!dragging) {
+      if (focusTo != null) {
+        rot += (focusTo - rot) * (1 - Math.exp(-dt * 6)); vel = 0;
+        if (Math.abs(focusTo - rot) < 0.002) { rot = focusTo; focusTo = null; }
+      } else {
+        const paused = hover || openT > 0 || now < holdUntil || document.activeElement === root;
+        const want = paused ? 0 : drift;
+        const tau = 0.25 + o.momentum * 1.6;
+        vel += (want - vel) * (1 - Math.exp(-dt / tau));
+        rot += vel * dt;
+        if (paused && Math.abs(vel) < 0.15) rot += (nearest(rot) - rot) * (1 - Math.exp(-dt * 5));   // settle on a card
+      }
     }
-    draws.sort((a, b) => b.rank - a.rank);   // centre card drawn last, on top
-    for (const d of draws) {
-      if (!textures[d.item]) continue;
-      const delay = d.rank * 0.07, ti = reduce ? 1 : ease((introT * 1.4 - delay) / 0.9);
-      const isCenter = d.rank === 0;
-      const scale = (1 - o.squeeze * vel) * (isCenter ? 1 + 0.06 * openT : 1 - 0.04 * openT);
-      const part = openT * Math.sign(d.cx) * cw * 0.35;   // others part when the centre card opens
-      gl.uniform1f(U.u_cx, d.cx + part);
-      gl.uniform1f(U.u_scale, scale);
-      gl.uniform1f(U.u_rise, -(1 - ti) * H * 0.9);
-      gl.uniform1f(U.u_alpha, ti * (isCenter ? 1 : 1 - 0.55 * openT));
-      gl.uniform1f(U.u_open, isCenter ? openT : openT * 0.6);
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, textures[d.item]); gl.uniform1i(U.u_tex, 0);
+    yaw += (yawT - yaw) * (1 - Math.exp(-dt * 4)); pitch += (pitchT - pitch) * (1 - Math.exp(-dt * 4));
+    const spin = Math.min(Math.abs(dragging ? dragVel : vel) / 3, 1);
+    const R = R0 * (1 + o.stretch * 0.14 * spin);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(U.u_res, W, H); gl.uniform1f(U.u_R, R); gl.uniform1f(U.u_curve, o.curve * (1 - 0.6 * openT));
+    gl.uniform1f(U.u_tilt, (o.tilt * Math.PI / 180) + pitch); gl.uniform1f(U.u_yaw, yaw);
+    gl.uniform1f(U.u_persp, o.perspective); gl.uniform1f(U.u_scale, fit);
+    gl.uniform1f(U.u_radius, o.radius); gl.uniform3f(U.u_fade, fade[0], fade[1], fade[2]);
+    gl.uniform1f(U.u_depthFade, o.depthFade); gl.uniform1f(U.u_inner, o.innerShade); gl.uniform1f(U.u_frontSign, 1);
+    const fi = frontIdx(rot);
+    const order = items.map((_, i) => { const th = i * alpha + rot; return { i, th, z: Math.cos(th + yaw) }; }).sort((a, b) => a.z - b.z);
+    for (const c of order) {
+      if (!textures[c.i]) continue;
+      const k = ((c.i - fi) % n + n) % n, rank = Math.min(k, n - k);
+      const ti = ease((intro * 1.6 - rank * 0.09) / 0.8);
+      const isFront = c.i === fi;
+      const sc = isFront ? 1 + 0.08 * openT : 1;
+      gl.uniform2f(U.u_size, o.cardWidth * sc, ch0 * sc);
+      gl.uniform1f(U.u_theta, c.th);
+      gl.uniform1f(U.u_rise, -(1 - ti) * H * 1.1);
+      gl.uniform1f(U.u_alpha, ti * (isFront ? 1 : 1 - 0.6 * openT));
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, textures[c.i]); gl.uniform1i(U.u_tex, 0);
       gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0);
     }
-    const ci = idxAt(target);
-    if (ci !== current) { current = ci; titleEl.textContent = items[ci].t; countEl.textContent = `${String(ci + 1).padStart(2, "0")} / ${String(n).padStart(2, "0")}`; o.onChange(ci); }
+    if (fi !== current) { current = fi; setCaption(fi); o.onChange(fi); }
     raf = requestAnimationFrame(frame);
   }
 
-  // ---------- interaction
-  const go = d => { target = snap(target) + d * step; restart(); };
-  function restart() { clearInterval(timer); if (o.autoplay && !reduce) timer = setInterval(() => { if (!hover && !dragging && document.activeElement !== root) go(1); }, o.interval * 1000); }
-  canvas.addEventListener("pointerdown", e => { dragging = true; moved = 0; downX = e.clientX; downPos = pos; canvas.setPointerCapture(e.pointerId); root.classList.add("grabbing"); });
-  canvas.addEventListener("pointermove", e => { if (!dragging) return; const dx = e.clientX - downX; moved = Math.max(moved, Math.abs(dx)); pos = downPos - dx; target = pos; });
+  // ---------- hit testing: which card is under the pointer (front-most wins)
+  function cardAt(clientX, clientY) {
+    const r = root.getBoundingClientRect(), px = clientX - r.left - W / 2, py = -(clientY - r.top - H / 2);
+    const t = o.tilt * Math.PI / 180 + pitch;
+    let best = null;
+    items.forEach((_, i) => {
+      const th = i * alpha + rot + yaw, x = R0 * Math.sin(th), z0 = R0 * Math.cos(th);
+      if (Math.cos(th) < 0.15) return;
+      const y = -Math.sin(t) * z0, z = Math.cos(t) * z0 - R0, s = o.perspective / (o.perspective - z) * fit;
+      const hw = o.cardWidth / 2 * s * Math.max(Math.cos(th), 0.3), hh = ch0 / 2 * s;
+      if (Math.abs(px - x * s) <= hw && Math.abs(py - y * s) <= hh && (!best || z > best.z)) best = { i, z };
+    });
+    return best ? best.i : null;
+  }
+  const turnTo = i => {   // shortest way round to bring card i to the front
+    const cur = rot, targetBase = -i * alpha; let d = targetBase - cur; d = ((d + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+    focusTo = cur + d; holdUntil = performance.now() + 2500;
+  };
+  const step = d => { focusTo = nearest(focusTo ?? rot) - d * alpha; holdUntil = performance.now() + 2500; };
+
+  canvas.addEventListener("pointerdown", e => {
+    dragging = true; moved = 0; downX = lastX = e.clientX; downRot = rot; lastT = performance.now(); dragVel = 0; focusTo = null;
+    canvas.setPointerCapture(e.pointerId); root.classList.add("grabbing");
+  });
+  canvas.addEventListener("pointermove", e => {
+    const r = root.getBoundingClientRect();
+    yawT = ((e.clientX - r.left) / r.width - 0.5) * o.parallax * 0.35;
+    pitchT = ((e.clientY - r.top) / r.height - 0.5) * o.parallax * 0.12;
+    if (!dragging) return;
+    const dx = e.clientX - downX; moved = Math.max(moved, Math.abs(dx));
+    rot = downRot + dx / (R0 * fit);
+    const t = performance.now(), dtm = Math.max(1, t - lastT) / 1000;
+    dragVel = dragVel * 0.6 + ((e.clientX - lastX) / (R0 * fit) / dtm) * 0.4; lastX = e.clientX; lastT = t;
+  });
   const up = e => {
     if (!dragging) return; dragging = false; root.classList.remove("grabbing");
-    if (moved < 6) {   // a click: centre card opens, any other card comes to the centre
-      const r = root.getBoundingClientRect(), off = Math.round((e.clientX - r.left - W / 2) / step);
-      if (off === 0) o.onSelect(idxAt(target)); else go(off);
-    } else { const fling = (pos - downPos) * 0.35; target = snap(pos + fling); restart(); }
+    if (moved < 6) {
+      const i = cardAt(e.clientX, e.clientY);
+      if (i == null) return;
+      if (i === frontIdx(rot)) o.onSelect(i); else turnTo(i);
+    } else { vel = Math.max(-6, Math.min(6, dragVel)) * o.momentum * 1.4; }
   };
   canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
+  root.addEventListener("mouseenter", () => hover = true);
+  root.addEventListener("mouseleave", () => { hover = false; yawT = pitchT = 0; });
   root.addEventListener("wheel", e => {
-    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : (o.captureWheel === false ? 0 : e.deltaY);
-    if (!d) return; e.preventDefault(); target += d; clearTimeout(wheelTimer); wheelTimer = setTimeout(() => { target = snap(target); }, 140); restart();
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;   // only horizontal trackpad swipes; page scroll stays normal
+    e.preventDefault(); focusTo = null; rot -= e.deltaX / (R0 * fit); vel = 0;
   }, { passive: false });
-  root.addEventListener("mouseenter", () => hover = true); root.addEventListener("mouseleave", () => hover = false);
   root.addEventListener("keydown", e => {
-    if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
-    if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); o.onSelect(idxAt(target)); }
+    if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); o.onSelect(frontIdx(rot)); }
   });
-  root.querySelector(".prev").onclick = () => go(-1); root.querySelector(".next").onclick = () => go(1);
-  layout(); restart(); raf = requestAnimationFrame(frame);
+  root.querySelector(".prev").onclick = () => step(-1);
+  root.querySelector(".next").onclick = () => step(1);
+  raf = requestAnimationFrame(frame);
   return {
-    setOpen(v) { const to = v ? 1 : 0; const t0 = performance.now(), from = openT; const tick = now => { openT = from + (to - from) * ease((now - t0) / 380); if (now - t0 < 380 && !destroyed) requestAnimationFrame(tick); }; requestAnimationFrame(tick); },
-    go, destroy() { destroyed = true; cancelAnimationFrame(raf); clearInterval(timer); ro.disconnect(); },
+    setOpen(v) { const to = v ? 1 : 0, t0 = performance.now(), from = openT; const tick = now => { openT = from + (to - from) * ease((now - t0) / 380); if (now - t0 < 380 && !destroyed) requestAnimationFrame(tick); }; requestAnimationFrame(tick); },
+    destroy() { destroyed = true; cancelAnimationFrame(raf); ro.disconnect(); mo.disconnect(); },
   };
 }
 
@@ -1283,7 +1352,7 @@ function pageLanding() {
   <section class="l-sec" id="l-features" style="padding-top:20px"><div class="l-wrap">
     <span class="eyebrow">Features</span>
     <h2>Ten capabilities, one engine.</h2>
-    <p class="sub">Drag, scroll or use the arrow keys. The row flows through an invisible lens and curls at its edges. Click the centre card to open it.</p>
+    <p class="sub">A 3D ring of features. Drag and throw it, or use the arrow keys. Hovering slows it to a stop. Click a card to turn it to the front, then click again to open it.</p>
     <div id="flexc"></div>
   </div></section>
 
@@ -1332,7 +1401,7 @@ function pageLanding() {
   // ---- flex carousel
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   fcInst?.destroy();
-  fcInst = FlexCarousel($("#flexc"), FEATURES, { label: "LedgerLens features", onSelect: i => openFeature(i, lastRun) });
+  fcInst = CircularCarousel($("#flexc"), FEATURES, { label: "LedgerLens features", onSelect: i => openFeature(i, lastRun) });
 
   $$("[data-scroll]").forEach(a => a.onclick = e => { e.preventDefault(); document.querySelector(a.getAttribute("href"))?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
   $("#ltheme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
